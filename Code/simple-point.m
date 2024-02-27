@@ -1,5 +1,6 @@
 % Given a particular lambda value, this code find the point on the
 % critical frontier for that lambda.
+% TODO add a more complete docstring
 
 % set up the problem manually using variables
 n  = 3;
@@ -14,10 +15,6 @@ covar = [
     0, 0, 3;
 ];
 
-% robust optimization variables
-omega = diag(rand(n,1));  % TODO work out how best to set this param
-kappa = rand;             % TODO work out how best to set this params
-
 % lagrange multiplier
 lambda = 0;
 
@@ -26,7 +23,7 @@ portprob = optimproblem;
 w = optimvar('w',n);
 
 % define problem objective function
-objective = w'*covar*w/2  - lambda*w'*mu - kappa*(w'*omega*w)^0.5;
+objective = w'*covar*w/2  - lambda*w'*mu;
 portprob.Objective = objective;
 
 % define problem constraints
@@ -36,13 +33,10 @@ portprob.Constraints.lowerbound = w >= lb;   % weights lower bound
 portprob.Constraints.upperbound = w <= ub;   % weights upper bound
 
 % toolbox options
-options = optimoptions('fmincon','Display','iter','TolFun',1e-10);
-
-% initial point
-w0 = struct('w',[0.5;0.5;0.0]);
+options = optimoptions('quadprog','Display','iter','TolFun',1e-10);
 
 tic
-[w_opt, objective_value_opt] = solve(portprob,w0,'Options',options);
+[w_opt, objective_value_opt] = solve(portprob,'Options',options);
 toc
 
 w_opt.w
