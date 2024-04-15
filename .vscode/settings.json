@@ -1,11 +1,14 @@
 {
     "cSpell.words": [
+        "diagflat",
         "gurobi",
         "hendo",
         "linalg",
         "mathcal",
         "printoptions",
         "proxqp",
-        "qpsolvers"
+        "qpsolvers",
+        "sqrtm",
+        "vtype"
     ]
 }
