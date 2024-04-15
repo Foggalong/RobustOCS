@@ -1,14 +1,19 @@
 {
     "cSpell.words": [
+        "bmatrix",
         "diagflat",
+        "Gregor's",
         "gurobi",
+        "gurobipy",
         "hendo",
         "linalg",
+        "mathbb",
         "mathcal",
         "printoptions",
         "proxqp",
         "qpsolvers",
         "sqrtm",
-        "vtype"
+        "vtype",
+        "WNRM"
     ]
 }
