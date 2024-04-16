@@ -10,6 +10,7 @@
         "gurobipy",
         "hendo",
         "linalg",
+        "loadtxt",
         "mathbb",
         "mathcal",
         "mubar",
