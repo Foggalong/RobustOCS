@@ -4,9 +4,9 @@ import alphargs
 
 # key problem variables loaded from standard format txt files
 sigma, mubar, omega, n = alphargs.load_problem(
-    "Example/04/A04.txt",
-    "Example/04/EBV04.txt",
-    "Example/04/S04.txt"
+    "examples/04/A04.txt",
+    "examples/04/EBV04.txt",
+    "examples/04/S04.txt"
 )
 
 # NOTE this trick of handling sex data is specific to the initial simulation
