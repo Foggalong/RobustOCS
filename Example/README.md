@@ -1,6 +1,6 @@
 # Examples
 
-- [04/](04/) A scaled up version of the small $n = 2$ example created by Julian, replicating that problem across sires and dams.
+- [04/](04/) A scaled up version of the small $n = 2$ example created by Julian, replicating the same problem across sires and dams.
 - [50/](50/) The 50 youngest individuals from a generated cohort of 12,000. Implications of this non-random example are unknown.
 
 ## File Description
