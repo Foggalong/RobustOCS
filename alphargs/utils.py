@@ -22,11 +22,47 @@ def print_compare_solutions(
     name2: str = "Second"
 ) -> None:
     """
-    Takes two solutions (comprised of at least a portfolio and objective value,
-    plus an optional z-value and/or solution name) as inputs, and prints a
-    comparison of the two solutions to the terminal. The number of decimals
-    values are displayed to defaults to 5, but can be changed through the
-    precision argument.
+    Given two solutions to a portfolio optimization problem (robust or non-
+    robust) this prints a comparison of the two solutions to the terminal.
+
+    Parameters
+    ----------
+    portfolio1 : ndarray
+        The portfolio vector for the first solution to compare.
+    portfolio2 : ndarray
+        The portfolio vector for the second solution to compare.
+    objective1 : float
+        Objective value for the first solution vector.
+    objective2 : float
+        Objective value for the second solution vector.
+    precision : int, optional
+        The number of decimal places to display values to. Default is `5`.
+    z1 : float or None, optional
+        Variable associated with uncertainty for the first solution.
+        Default is `None`, which corresponds to the non-robust problem.
+    z2 : float or None, optional
+        Variable associated with uncertainty for the second solution.
+        Default is `None`, which corresponds to the non-robust problem.
+    name1: str, optional
+        Name to use for the first solution in output. Default is `"First"`.
+    name2: str, optional
+        Name to use for the second solution in output. Default is `"Second"`.
+
+    Examples
+    --------
+    This function does not have a return value, but when used it produces a
+    terminal output like the following:
+    >>> print_compare_solutions(..., z2=z_rbs, name1="w_std", name2="w_rbs")
+    i  w_std    w_rbs
+    1  0.00000  0.38200
+    2  0.00000  0.38200
+    3  0.50000  0.11800
+    4  0.50000  0.11800
+    w_std objective: 1.87500
+    w_rbs objective: 0.77684 (z = 0.37924)
+    Maximum change: 0.38200
+    Average change: 0.38200
+    Minimum change: 0.38200
     """
 
     dimension = portfolio1.size

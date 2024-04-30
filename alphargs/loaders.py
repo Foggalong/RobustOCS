@@ -11,9 +11,21 @@ import numpy.typing as npt  # variable typing definitions for NumPy
 
 def load_ped(filename: str) -> dict[int, list[int]]:
     """
-    Function for reading *.ped files to a dictionary. Takes the file name
-    as a string input and returns the pedigree structure as a dictionary.
+    Function for reading pedigree files into a Python dictionary.
+
+    Parameters
+    ----------
+    filename : str
+        Filename, including extension. Does not have to be `.ped` specifically.
+
+    Returns
+    -------
+    dict
+        Represents the pedigree structure. Integer keys give the index of
+        each candidate and (integer, integer) values give the indices of that
+        candidates parents. An index of zero signifies unknown parentage.
     """
+
     with open(filename, "r") as file:
         # first line of *.ped lists the headers; skip
         file.readline()
@@ -27,10 +39,21 @@ def load_ped(filename: str) -> dict[int, list[int]]:
 
 def makeA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.float64]:
     """
-    Construct Wright's Numerator Relationship Matrix from a given pedigree
-    structure. Takes the pedigree as a dictionary input and returns the
-    matrix as output.
+    Constructs Wright's Numerator Relationship Matrix (WNRM) from a given
+    pedigree structure.
+
+    Parameters
+    ----------
+    pedigree : dict
+        Pedigree structure in `{int: [int, int]}` dictionary format, such
+        as that returned from `load_ped`.
+
+    Returns
+    -------
+    ndarray
+        Wright's Numerator Relationship Matrix.
     """
+
     m = len(pedigree)
     # preallocate memory for A
     A = np.zeros((m, m), dtype=float)
@@ -57,13 +80,38 @@ def load_problem(A_filename: str, E_filename: str, S_filename: str,
                  ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64],
                             npt.NDArray[np.float64], int]:
     """
-    Used to load genetic selection problems into NumPy. It takes three
-    string inputs for filenames where Sigma, Mu, and Omega are stored,
-    as well as an optional integer input for problem dimension if this
-    is known. If it's know know, it's worked out based on E_filename.
+    Load a robust genetic selection problem into Numpy
 
-    As output, it returns (A, E, S, n), where A and S are n-by-n NumPy
-    arrays, E is a length n NumPy array, and n is an integer.
+    Parameters
+    ----------
+    A_filename : str
+        Filename for a file which encodes `A` (which is Sigma) whether in
+        sparse coordinate or pedigree format.
+    E_filename : str
+        Filename for a file which encodes `E` (which is Mu-bar).
+    S_filename : str
+        Filename for a file which encodes `S` (which is Omega) which will be
+        in sparse coordinate format.
+    dimension : int or None, optional
+        The size of the problem, which can be specified to aid preallocation
+        or worked out explicitly from the `E` / mu produced. Default value
+        is `None`, i.e. the value is derived from `E`.
+    pedigree : bool, optional
+        Signifies whether `A` is stored as a pedigree structure (`True`)
+        or in sparse coordinate format (`False`). Default value is `False`.
+
+    Returns
+    -------
+    ndarray
+        Covariance matrix of candidates in the cohort.
+    ndarray
+        Vector of expected values of the expected breeding values of
+        candidates in the cohort.
+    ndarray
+        Covariance matrix of expected breeding values of candidates in the
+        cohort.
+    int
+        Dimension of the problem.
     """
 
     def load_symmetric_matrix(filename: str, dimension: int

@@ -16,7 +16,7 @@ def gurobi_standard_genetics(
     mu: npt.NDArray[np.float64],
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
-    lam: float,
+    lam: float,  # cannot be called `lambda`, that's reserved in Python
     dimension: int,
     upper_bound: npt.NDArray[np.float64] | float = 1.0,
     lower_bound: npt.NDArray[np.float64] | float = 0.0,
@@ -25,14 +25,62 @@ def gurobi_standard_genetics(
     debug: bool = False
 ) -> tuple[npt.NDArray[np.float64], float]:
     """
-    Takes a sigma, mu, sire list, dam list, and dimension as inputs and solves
-    the standard genetic selection problem with Gurobi for a given value of
-    lambda (lam), returning the portfolio and objective value as outputs. The
-    default lower and upper bounds of 0 and 1 can be changed also.
+    Solve the standard genetic selection problem using Gurobi.
 
-    Optional arguments time_limit and max_duality_gap respectively control how
-    long Gurobi will spend on the problem and the maximum allowable duality
-    gap. Optional argument debug sets whether Gurobi prints output to terminal.
+    Given a standard genetic selection problem
+    ```
+        max_w w'mu - (lambda/2)*w'*sigma*w
+        subject to lb <= w <= ub,
+                   w_S*e_S = 1/2,
+                   w_D*e_D = 1/2,
+    ```
+    this function uses Gurobi to find the optimum w and the objective for that
+    portfolio. Additional parameters give control over long Gurobi can spend
+    on the problem, to prevent indefinite hangs.
+
+    Parameters
+    ----------
+    sigma : ndarray
+        Covariance matrix of the candidates in the cohorts for selection.
+    mu : ndarray
+        Vector of expected returns for candidates in the cohorts for selection.
+    sires : Any
+        An object representing an index set for sires (male candidates) in the
+        cohort. Type is not restricted.
+    dams : Any
+        An object representing an index set for dams (female candidates) in the
+        cohort. Type is not restricted.
+    lam : float
+        Lambda value to optimize for, which controls the balance between risk
+        and return. Lower values will give riskier portfolios, higher values
+        more conservative ones.
+    dimension : int
+        Number of candidates in the cohort, i.e. the dimension of the problem.
+    upper_bound : ndarray or float, optional
+        Upper bound on how much each candidate can contribute. Can be an array
+        of differing bounds for each candidate, or a float which applies to all
+        candidates. Default value is `1.0`.
+    lower_bound : ndarray or float, optional
+        Lower bound on how much each candidate can contribute. Can be an array
+        of differing bounds for each candidate, or a float which applies to all
+        candidates. Default value is `0.0`.
+    time_limit : float or None, optional
+        Maximum amount of time in seconds to give Gurobi to solve the problem.
+        Default value is `None`, i.e. no time limit.
+    max_duality_gap : float or None, optional
+        Maximum allowable duality gap to give Gurobi when solving the problem.
+        Default value is `None`, i.e. do not allow any duality gap.
+    debug : bool, optional
+        Flag which controls both whether Gurobi prints its output to terminal
+        and whether it saves the model file to the working directory (filename
+        is hardcoded as `standard-opt.mps`). Default value is `False.
+
+    Returns
+    -------
+    ndarray
+        Portfolio vector which Gurobi has determined is a solution.
+    float
+        Value of the objective function for returned solution vector.
     """
 
     # create models for standard and robust genetic selection
@@ -40,7 +88,8 @@ def gurobi_standard_genetics(
 
     # Gurobi spews all its output into the terminal by default, this restricts
     # that behaviour to only happen when the `debug` flag is used.
-    if not debug: model.setParam('OutputFlag', 0)
+    if not debug:
+        model.setParam('OutputFlag', 0)
 
     # integrating bounds within variable definitions is more efficient than
     # as a separate constraint, which Gurobi would convert to bounds anyway
@@ -63,11 +112,14 @@ def gurobi_standard_genetics(
     model.addConstr(M@w == m, name="sum-to-half")
 
     # optional controls to stop Gurobi taking too long
-    if time_limit: model.setParam(GRB.Param.TimeLimit, time_limit)
-    if max_duality_gap: model.setParam('MIPGap', max_duality_gap)
+    if time_limit:
+        model.setParam(GRB.Param.TimeLimit, time_limit)
+    if max_duality_gap:
+        model.setParam('MIPGap', max_duality_gap)
 
     # model file can be used externally for verification
-    if debug: model.write("standard-opt.mps")
+    if debug:
+        model.write("standard-opt.mps")
 
     model.optimize()
     return w.X, model.ObjVal
@@ -79,7 +131,7 @@ def gurobi_robust_genetics(
     omega: npt.NDArray[np.float64],
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
-    lam: float,
+    lam: float,  # cannot be called `lambda`, that's reserved in Python
     kappa: float,
     dimension: int,
     upper_bound: npt.NDArray[np.float64] | float = 1.0,
@@ -89,15 +141,77 @@ def gurobi_robust_genetics(
     debug: bool = False
 ) -> tuple[npt.NDArray[np.float64], float, float]:
     """
-    Takes a sigma, mu-bar, omega, sire list, dam list, and dimension as inputs
-    and solves the robust genetic selection problem using Gurobi for given
-    values of lambda (lam) and kappa. It returns the portfolio and objective
-    value as outputs. The default lower and upper bounds of 0 and 1 can be
-    changed also.
+    Solve the robust genetic selection problem using Gurobi.
 
-    Optional arguments time_limit and max_duality_gap respectively control how
-    long Gurobi will spend on the problem and the maximum allowable duality
-    gap. Optional argument debug sets whether Gurobi prints output to terminal.
+    Given a robust genetic selection problem
+    ```
+        max_w (min_mu w'mu subject to mu in U) - (lambda/2)*w'*sigma*w
+        subject to lb <= w <= ub,
+                   w_S*e_S = 1/2,
+                   w_D*e_D = 1/2,
+    ```
+    where U is a quadratic uncertainty set for mu~N(mubar, omega), this
+    function uses Gurobi to find the optimum w and the objective for that
+    portfolio. It first uses the KKT conditions to find exactly the solution
+    to the inner problem, substitutes that into the outer problem, and then
+    relaxes the uncertainty term into a constraint before solving.
+
+    Additional parameters give control over long Gurobi can spend
+    on the problem, to prevent indefinite hangs.
+
+    Parameters
+    ----------
+    sigma : ndarray
+        Covariance matrix of the candidates in the cohorts for selection.
+    mubar : ndarray
+        Vector of expected values of the expected returns for candidates in the
+        cohort for selection.
+    omega : ndarray
+        Covariance matrix for expected returns for candidates in the cohort for
+        selection.
+    sires : Any
+        An object representing an index set for sires (male candidates) in the
+        cohort. Type is not restricted.
+    dams : Any
+        An object representing an index set for dams (female candidates) in the
+        cohort. Type is not restricted.
+    lam : float
+        Lambda value to optimize for, which controls the balance between risk
+        and return. Lower values will give riskier portfolios, higher values
+        more conservative ones.
+    kappa : float
+        Kappa value to optimize for, which controls how resilient the solution
+        must be to variation in expected values.
+    dimension : int
+        Number of candidates in the cohort, i.e. the dimension of the problem.
+    upper_bound : ndarray or float, optional
+        Upper bound on how much each candidate can contribute. Can be an array
+        of differing bounds for each candidate, or a float which applies to all
+        candidates. Default value is `1.0`.
+    lower_bound : ndarray or float, optional
+        Lower bound on how much each candidate can contribute. Can be an array
+        of differing bounds for each candidate, or a float which applies to all
+        candidates. Default value is `0.0`.
+    time_limit : float or None, optional
+        Maximum amount of time in seconds to give Gurobi to solve the problem.
+        Default value is `None`, i.e. no time limit.
+    max_duality_gap : float or None, optional
+        Maximum allowable duality gap to give Gurobi when solving the problem.
+        Default value is `None`, i.e. do not allow any duality gap.
+    debug : bool, optional
+        Flag which controls both whether Gurobi prints its output to terminal
+        and whether it saves the model file to the working directory (filename
+        is hardcoded as `standard-opt.mps`). Default value is `False.
+
+    Returns
+    -------
+    ndarray
+        Portfolio vector which Gurobi has determined is a solution.
+    float
+        Auxillary variable corresponding to uncertainty associated with the
+        portfolio vector which Gurobi has determined is a solution.
+    float
+        Value of the objective function for returned solution vector.
     """
 
     # create models for standard and robust genetic selection
@@ -105,7 +219,8 @@ def gurobi_robust_genetics(
 
     # Gurobi spews all its output into the terminal by default, this restricts
     # that behaviour to only happen when the `debug` flag is used.
-    if not debug: model.setParam('OutputFlag', 0)
+    if not debug:
+        model.setParam('OutputFlag', 0)
 
     # integrating bounds within variable definitions is more efficient than
     # as a separate constraint, which Gurobi would convert to bounds anyway
@@ -132,11 +247,14 @@ def gurobi_robust_genetics(
     model.addConstr(z**2 >= w.transpose()@omega@w, name="uncertainty")
 
     # optional controls to stop Gurobi taking too long
-    if time_limit: model.setParam(GRB.Param.TimeLimit, time_limit)
-    if max_duality_gap: model.setParam('MIPGap', max_duality_gap)
+    if time_limit:
+        model.setParam(GRB.Param.TimeLimit, time_limit)
+    if max_duality_gap:
+        model.setParam('MIPGap', max_duality_gap)
 
     # model file can be used externally for verification
-    if debug: model.write("robust-opt.mps")
+    if debug:
+        model.write("robust-opt.mps")
 
     model.optimize()
     return w.X, z.X, model.ObjVal
