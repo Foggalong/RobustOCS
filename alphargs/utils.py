@@ -5,6 +5,7 @@ This file contains additional utilities, such as for printing and comparing
 portfolios produced by the solvers.
 """
 
+import math                 # used for math.sqrt
 import numpy as np          # defines matrix structures
 import numpy.typing as npt  # variable typing definitions for NumPy
 
@@ -54,3 +55,64 @@ def print_compare_solutions(
         f"\nAverage change: {np.mean(portfolio_abs_diff):.{precision}f}"
         f"\nMinimum change: {min(portfolio_abs_diff):.{precision}f}"
     )
+
+
+def check_uncertainty_constraint(
+    z: float,
+    w: npt.NDArray[np.float64],
+    omega: npt.NDArray[np.float64],
+    tol: float = 1e-8,
+    debug: bool = False
+) -> bool:
+    """
+    Check the gap in the robust genetic selection uncertainty constraint.
+
+    In our model for robust genetic selection we relax the objective term
+    `sqrt(w.transpose()@Omega@w)` with `z >= sqrt(w.transpose()@Omega@w)`
+    to keep the problem in a Gurobi-friendly form. While mathematically
+    this should be equivalent, this function can be used to check how close
+    z and the right hand side are.
+
+    Parameters
+    ----------
+    z : float
+        Auxillary variable from a solution to the robust selection problem.
+    w : ndarray
+        Portfolio vector from a solution to the robust selection problem.
+    omega : ndarray
+        Covariance matrix for the distribution of expected values.
+    tol : float, optional
+        Tolerance with which to compare the two values. Default is `1e-8`.
+    debug : float, optional
+        Determines whether to print a comparison of the variables to the
+        terminal. Default is `False`.
+
+    Returns
+    -------
+    bool
+        True if successful, False otherwise. As a side effect, it can print
+        the two variables and their difference to the terminal (see below).
+
+    Examples
+    --------
+    If using the debug output, some like the following will be printed to
+    the terminal:
+
+    >>> check_uncertainty_constraint(..., debug=True)
+         z: 0.37923871642022844
+    wT*Ω*w: 0.3792386953366983
+      Diff: 2.1083530143961582e-08
+    """
+
+    # using np.sqrt returns an ndarray type object, even if it's only
+    # got one entry, which in turn messes with the return typing.
+    rhs = math.sqrt(w.transpose()@omega@w)
+
+    if debug:
+        print(
+            f"\n     z: {z}"
+            f"\nw'*Ω*w: {rhs}"
+            f"\n  Diff: {z-rhs}"
+        )
+
+    return (rhs - z) < tol

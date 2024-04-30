@@ -28,4 +28,7 @@ alphargs.print_compare_solutions(
     w_std, w_rbs, obj_std, obj_rbs, z2=z_rbs, name1="w_std", name2="w_rbs")
 
 
+if not alphargs.check_uncertainty_constraint(z_rbs, w_rbs, omega, debug=True):
+    raise ValueError
+
 print("\nDone!")
