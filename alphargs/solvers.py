@@ -12,8 +12,8 @@ from gurobipy import GRB    # Gurobi optimization interface (2)
 
 
 def gurobi_standard_genetics(
-    sigma: np.ndarray,
-    mu: np.ndarray,
+    sigma: npt.NDArray[np.float64],
+    mu: npt.NDArray[np.float64],
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
     lam: float,
@@ -23,7 +23,7 @@ def gurobi_standard_genetics(
     time_limit: float | None = None,
     max_duality_gap: float | None = None,
     debug: bool = False
-):  # -> tuple[npt.NDArray[np.float64], float]:  # BUG Gurobi typing broken
+) -> tuple[npt.NDArray[np.float64], float]:
     """
     Takes a sigma, mu, sire list, dam list, and dimension as inputs and solves
     the standard genetic selection problem with Gurobi for a given value of
@@ -87,7 +87,7 @@ def gurobi_robust_genetics(
     time_limit: float | None = None,
     max_duality_gap: float | None = None,
     debug: bool = False
-):  # -> tuple[npt.NDArray, float, float]:  # BUG Gurobi typing broken
+) -> tuple[npt.NDArray[np.float64], float, float]:
     """
     Takes a sigma, mu-bar, omega, sire list, dam list, and dimension as inputs
     and solves the robust genetic selection problem using Gurobi for given

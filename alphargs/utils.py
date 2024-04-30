@@ -5,12 +5,13 @@ This file contains additional utilities, such as for printing and comparing
 portfolios produced by the solvers.
 """
 
-import numpy as np
+import numpy as np          # defines matrix structures
+import numpy.typing as npt  # variable typing definitions for NumPy
 
 
 def print_compare_solutions(
-    portfolio1,  # : npt.NDArray[np.float64],  # BUG Gurobi typing broken
-    portfolio2,  # : npt.NDArray[np.float64],  # BUG Gurobi typing broken
+    portfolio1: npt.NDArray[np.float64],
+    portfolio2: npt.NDArray[np.float64],
     objective1: float,
     objective2: float,
     precision: int = 5,

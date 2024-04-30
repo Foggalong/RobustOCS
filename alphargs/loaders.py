@@ -9,7 +9,7 @@ import numpy as np          # defines matrix structures
 import numpy.typing as npt  # variable typing definitions for NumPy
 
 
-def load_ped(filename: str) -> dict:  # TODO add dict typing
+def load_ped(filename: str) -> dict[int, list[int]]:
     """
     Function for reading *.ped files to a dictionary. Takes the file name
     as a string input and returns the pedigree structure as a dictionary.
@@ -25,7 +25,7 @@ def load_ped(filename: str) -> dict:  # TODO add dict typing
     return ped
 
 
-def makeA(pedigree: dict) -> npt.NDArray[np.float64]:  # TODO add dict typing
+def makeA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.float64]:
     """
     Construct Wright's Numerator Relationship Matrix from a given pedigree
     structure. Takes the pedigree as a dictionary input and returns the
