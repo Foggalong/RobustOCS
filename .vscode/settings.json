@@ -1,8 +1,10 @@
 {
     "cSpell.words": [
+        "alphargs",
         "bilevel",
         "bmatrix",
         "diagflat",
+        "dtype",
         "Gorjanc",
         "Gregor",
         "Gregor's",
@@ -15,6 +17,7 @@
         "mathbb",
         "mathcal",
         "mubar",
+        "operatorname",
         "Pocrnić",
         "printoptions",
         "proxqp",
@@ -22,5 +25,6 @@
         "sqrtm",
         "vtype",
         "WNRM"
-    ]
+    ],
+    "python.analysis.typeCheckingMode": "basic"
 }
