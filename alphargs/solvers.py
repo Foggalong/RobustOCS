@@ -10,6 +10,9 @@ import numpy.typing as npt  # variable typing definitions for NumPy
 import gurobipy as gp       # Gurobi optimization interface (1)
 from gurobipy import GRB    # Gurobi optimization interface (2)
 
+# controls what's imported on `from alphargs.solvers import *`
+__all__ = ["gurobi_standard_genetics", "gurobi_robust_genetics"]
+
 
 def gurobi_standard_genetics(
     sigma: npt.NDArray[np.float64],

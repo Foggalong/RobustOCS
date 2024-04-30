@@ -9,6 +9,9 @@ import math                 # used for math.sqrt
 import numpy as np          # defines matrix structures
 import numpy.typing as npt  # variable typing definitions for NumPy
 
+# controls what's imported on `from alphargs.utils import *`
+__all__ = ["print_compare_solutions", "check_uncertainty_constraint"]
+
 
 def print_compare_solutions(
     portfolio1: npt.NDArray[np.float64],

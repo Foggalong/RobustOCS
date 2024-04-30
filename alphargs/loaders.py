@@ -8,6 +8,9 @@ functions define the appropriate methods for loading those in correctly.
 import numpy as np          # defines matrix structures
 import numpy.typing as npt  # variable typing definitions for NumPy
 
+# controls what's imported on `from alphargs.loaders import *`
+__all__ = ["load_ped", "makeA", "load_problem"]
+
 
 def load_ped(filename: str) -> dict[int, list[int]]:
     """
