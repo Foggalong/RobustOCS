@@ -125,7 +125,7 @@ def gurobi_standard_genetics(
         model.write("standard-opt.mps")
 
     model.optimize()
-    return w.X, model.ObjVal
+    return np.array(w.X), model.ObjVal  # HACK np.array avoids issue #9
 
 
 def gurobi_robust_genetics(
@@ -260,4 +260,4 @@ def gurobi_robust_genetics(
         model.write("robust-opt.mps")
 
     model.optimize()
-    return w.X, z.X, model.ObjVal
+    return np.array(w.X), z.X, model.ObjVal  # HACK np.array avoids issue #9
