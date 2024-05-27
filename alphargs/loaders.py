@@ -9,7 +9,7 @@ import numpy as np          # defines matrix structures
 import numpy.typing as npt  # variable typing definitions for NumPy
 
 # controls what's imported on `from alphargs.loaders import *`
-__all__ = ["load_ped", "makeA", "load_problem"]
+__all__ = ["load_ped", "makeA", "load_problem", "load_problem_sparse"]
 
 
 def load_ped(filename: str) -> dict[int, list[int]]:
@@ -150,3 +150,44 @@ def load_problem(A_filename: str, E_filename: str, S_filename: str,
         A = load_symmetric_matrix(A_filename, dimension)
 
     return A, E, S, dimension
+
+
+def load_problem_sparse(A_filename: str, E_filename: str, S_filename: str,
+                        dimension: int | None = None, pedigree: bool = False
+                        ):  # TODO populate return types list
+    """
+    TODO write a docstring for alternative function which loads the
+    problem into condensed row/column coordinate format.
+    """
+
+    def make_sparseA(pedigree):
+        """
+        TODO write a function which loads a pedigree tree into sparse
+        matrix format. NOTE: this is not essential to have right now,
+        we aren't yet working with pedigree trees directly.
+        """
+        return None, None, None
+
+    def some_sparse_loader(filename, n):
+        """
+        TODO write a function which loads a matrix from file into
+        compressed row/column format.
+        """
+        return None, None, None
+
+    E = np.loadtxt(E_filename, dtype=float)
+    # if dimension not specified, use `E` which doesn't need preallocation
+    if not dimension:
+        assert isinstance(E.size, int)  # catches E being empty
+        dimension = E.size
+
+    # TODO replace some_loader_for_sparse_coord
+    S_start, S_index, S_value = some_sparse_loader(S_filename, dimension)
+
+    # A can be stored as a pedigree or by coordinates
+    if pedigree:
+        A_start, A_index, A_value = make_sparseA(load_ped(A_filename))
+    else:
+        A_start, A_index, A_value = some_sparse_loader(A_filename, dimension)
+
+    return A_start, A_index, A_value, E,  S_start, S_index, S_value, dimension
