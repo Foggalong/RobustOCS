@@ -1,6 +1,6 @@
 # AlphaRGS
 
-Tools for solving robust genetics selection problems in Python. It depends on Python 3.10+, [NumPy](https://pypi.org/project/numpy/), and [Gurobi](https://www.gurobi.com/) via [gurobipy](https://pypi.org/project/gurobipy/).  
+Tools for solving robust genetics selection problems in Python. It depends on Python 3.10+, [NumPy](https://pypi.org/project/numpy), [SciPy](https://scipy.org), [Gurobi](https://www.gurobi.com) via [gurobipy](https://pypi.org/project/gurobipy), and [HiGHS](https://highs.dev) via [highspy](https://pypi.org/project/highspy).
 
 ## Structure
 
