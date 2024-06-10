@@ -10,6 +10,7 @@ import numpy.typing as npt  # variable typing definitions for NumPy
 import gurobipy as gp       # Gurobi optimization interface
 import highspy              # HiGHS optimization interface
 from math import sqrt       # used within the robust constraint
+from scipy import sparse    # used for sparse matrix format
 
 # controls what's imported on `from alphargs.solvers import *`
 __all__ = [
@@ -20,7 +21,7 @@ __all__ = [
 
 
 def gurobi_standard_genetics(
-    sigma: npt.NDArray[np.float64],
+    sigma: npt.NDArray[np.float64] | sparse.spmatrix,
     mu: npt.NDArray[np.float64],
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
@@ -48,7 +49,7 @@ def gurobi_standard_genetics(
 
     Parameters
     ----------
-    sigma : ndarray
+    sigma : ndarray or spmatrix
         Covariance matrix of the candidates in the cohorts for selection.
     mu : ndarray
         Vector of expected returns for candidates in the cohorts for selection.
@@ -134,9 +135,9 @@ def gurobi_standard_genetics(
 
 
 def gurobi_robust_genetics(
-    sigma: npt.NDArray[np.float64],
+    sigma: npt.NDArray[np.float64] | sparse.spmatrix,
     mubar: npt.NDArray[np.float64],
-    omega: npt.NDArray[np.float64],
+    omega: npt.NDArray[np.float64] | sparse.spmatrix,
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
     lam: float,  # cannot be called `lambda`, that's reserved in Python
@@ -169,12 +170,12 @@ def gurobi_robust_genetics(
 
     Parameters
     ----------
-    sigma : ndarray
+    sigma : ndarray or spmatrix
         Covariance matrix of the candidates in the cohorts for selection.
     mubar : ndarray
         Vector of expected values of the expected returns for candidates in the
         cohort for selection.
-    omega : ndarray
+    omega : ndarray or spmatrix
         Covariance matrix for expected returns for candidates in the cohort for
         selection.
     sires : Any
@@ -269,9 +270,9 @@ def gurobi_robust_genetics(
 
 
 def gurobi_robust_genetics_sqp(
-    sigma: npt.NDArray[np.float64],
+    sigma: npt.NDArray[np.float64] | sparse.spmatrix,
     mubar: npt.NDArray[np.float64],
-    omega: npt.NDArray[np.float64],
+    omega: npt.NDArray[np.float64] | sparse.spmatrix,
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
     lam: float,  # cannot be called `lambda`, that's reserved in Python
@@ -306,12 +307,12 @@ def gurobi_robust_genetics_sqp(
 
     Parameters
     ----------
-    sigma : ndarray
+    sigma : ndarray or spmatrix
         Covariance matrix of the candidates in the cohorts for selection.
     mubar : ndarray
         Vector of expected values of the expected returns for candidates in the
         cohort for selection.
-    omega : ndarray
+    omega : ndarray or spmatrix
         Covariance matrix for expected returns for candidates in the cohort for
         selection.
     sires : Any
