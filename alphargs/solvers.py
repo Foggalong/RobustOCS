@@ -16,7 +16,9 @@ from scipy import sparse    # used for sparse matrix format
 __all__ = [
     "gurobi_standard_genetics",
     "gurobi_robust_genetics",
-    "gurobi_robust_genetics_sqp"
+    "gurobi_robust_genetics_sqp",
+    "highs_standard_genetics",
+    "highs_robust_genetics_sqp"
 ]
 
 
@@ -437,14 +439,166 @@ def gurobi_robust_genetics_sqp(
     return np.array(w.X), z.X, model.ObjVal  # HACK np.array avoids issue #9
 
 
-def highspy_robust_genetics_sqp(
-    sigma_start: npt.NDArray[np.float64],
-    sigma_index: npt.NDArray[np.float64],
-    sigma_value: npt.NDArray[np.float64],
+def highs_bound_like(vector: npt.NDArray[np.float64],
+                     value: float | npt.NDArray[np.float64]
+                     ) -> npt.NDArray[np.float64]:
+    """
+    Helper function which allows HiGHS to interpret variable bounds specified
+    either as a vector or a single floating point value. If `value` is an array
+    will just return that array. If `value` is a float, it'll return a NumPy
+    array in the shape of `vector` with every entry being `value`.
+    """
+    return np.full_like(vector, value) if type(value) is float else value
+
+
+def highs_standard_genetics(
+    sigma: sparse.spmatrix,
+    mu: npt.NDArray[np.float64],
+    sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
+    dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
+    lam: float,  # cannot be called `lambda`, that's reserved in Python
+    dimension: int,
+    upper_bound: npt.NDArray[np.float64] | float = 1.0,
+    lower_bound: npt.NDArray[np.float64] | float = 0.0,
+    time_limit: float | None = None,
+    max_duality_gap: float | None = None,
+    debug: bool = False
+) -> tuple[npt.NDArray[np.float64], float]:
+    """
+    Solve the standard genetic selection problem using HiGHS.
+
+    Given a standard genetic selection problem
+    ```
+        max_w w'mu - (lambda/2)*w'*sigma*w
+        subject to lb <= w <= ub,
+                   w_S*e_S = 1/2,
+                   w_D*e_D = 1/2,
+    ```
+    this function uses HiGHS to find the optimum w and the objective for that
+    portfolio. Additional parameters give control over long HiGHS can spend
+    on the problem, to prevent indefinite hangs.
+
+    Parameters
+    ----------
+    sigma : spmatrix
+        Covariance matrix of the candidates in the cohorts for selection.
+    mu : ndarray
+        Vector of expected returns for candidates in the cohorts for selection.
+    sires : Any
+        An object representing an index set for sires (male candidates) in the
+        cohort. Type is not restricted.
+    dams : Any
+        An object representing an index set for dams (female candidates) in the
+        cohort. Type is not restricted.
+    lam : float
+        Lambda value to optimize for, which controls the balance between risk
+        and return. Lower values will give riskier portfolios, higher values
+        more conservative ones.
+    dimension : int
+        Number of candidates in the cohort, i.e. the dimension of the problem.
+    upper_bound : ndarray or float, optional
+        Upper bound on how much each candidate can contribute. Can be an array
+        of differing bounds for each candidate, or a float which applies to all
+        candidates. Default value is `1.0`.
+    lower_bound : ndarray or float, optional
+        Lower bound on how much each candidate can contribute. Can be an array
+        of differing bounds for each candidate, or a float which applies to all
+        candidates. Default value is `0.0`.
+    time_limit : float or None, optional
+        Maximum amount of time in seconds to give HiGHS to solve the problem.
+        Default value is `None`, i.e. no time limit.
+    max_duality_gap : float or None, optional
+        HiGHS does not support a tolerance on duality gap for this type of
+        problem, so regardless whether specified the value will be ignored.
+    debug : bool, optional
+        Flag which controls both whether HiGHS prints its output to terminal
+        and whether it saves the model file to the working directory (filename
+        is hardcoded as `standard-opt.mps`). Default value is `False.
+
+    Returns
+    -------
+    ndarray
+        Portfolio vector which HiGHS has determined is a solution.
+    float
+        Value of the objective function for returned solution vector.
+    """
+
+    # initialise an empty model
+    h = highspy.Highs()
+    model = highspy.HighsModel()
+
+    model.lp_.model_name_ = "standard-genetics"
+    model.lp_.num_col_ = dimension
+    model.lp_.num_row_ = 2
+
+    # HiGHS does minimization so negate objective
+    model.lp_.col_cost_ = -mu
+
+    # bounds on w using a helper function
+    model.lp_.col_lower_ = highs_bound_like(mu, lower_bound)
+    model.lp_.col_upper_ = highs_bound_like(mu, upper_bound)
+
+    # define the quadratic term in the objective
+    sigma = sparse.csc_matrix(sigma)  # BUG is sigma in CSR or CSC format?
+    model.hessian_.dim_ = dimension
+    model.hessian_.start_ = sigma.indptr
+    model.hessian_.index_ = sigma.indices
+    # HiGHS multiplies Hessian by 1/2 so just need factor of lambda
+    model.hessian_.value_ = lam*sigma.data
+
+    # set up the two sum-to-half constraints
+    M = np.zeros((2, dimension), dtype=int)
+    # define the M so that column i is [1;0] if i is a sire and [0;1] otherwise
+    M[0, sires] = 1
+    M[1, dams] = 1
+    M = sparse.csr_matrix(M)  # HACK should directly form CSR format
+    # define the right hand side of the constraint Mx = m
+    m = np.full(2, 0.5)
+
+    # add Mx = m to the model
+    model.lp_.row_lower_ = m
+    model.lp_.row_upper_ = m
+    model.lp_.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
+    model.lp_.a_matrix_.start_ = M.indptr
+    model.lp_.a_matrix_.index_ = M.indices
+    model.lp_.a_matrix_.value_ = M.data
+
+    # HiGHS spews all its output into the terminal by default, this restricts
+    # that behaviour to only happen when the `debug` flag is used.
+    if not debug:
+        h.setOptionValue('output_flag', False)
+        h.setOptionValue('log_to_console', False)
+
+    # optional controls to stop HiGHS taking too long
+    if time_limit:
+        h.setOptionValue('time_limit', time_limit)
+    if max_duality_gap:
+        pass  # NOTE HiGHS doesn't support duality gap, skip
+
+    # model file can be used externally for verification  # BUG not working
+    if debug:
+        h.setOptionValue('write_model_to_file', True)
+        h.setOptionValue('write_model_file', 'standard-opt.mps')
+
+    h.passModel(model)
+    h.run()
+
+    # prints the solution with info about dual values
+    if debug:
+        h.writeSolution("", 1)
+
+    # by default, col_value is a stock-Python list
+    solution = np.array(h.getSolution().col_value)
+    # we negated the objective function, so negate it back
+    objective_value = -h.getInfo().objective_function_value
+
+    return solution, objective_value
+
+
+def highs_robust_genetics_sqp(
+    sigma: sparse.spmatrix,
     mubar: npt.NDArray[np.float64],
-    omega_start: npt.NDArray[np.float64],
-    omega_index: npt.NDArray[np.float64],
-    omega_value: npt.NDArray[np.float64],
+    omega: sparse.spmatrix,
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
     lam: float,  # cannot be called `lambda`, that's reserved in Python
@@ -479,14 +633,12 @@ def highspy_robust_genetics_sqp(
 
     Parameters
     ----------
-    TODO: split this out into corresponding three values
-    sigma : ndarray
+    sigma : spmatrix
         Covariance matrix of the candidates in the cohorts for selection.
     mubar : ndarray
         Vector of expected values of the expected returns for candidates in the
         cohort for selection.
-    TODO: split this out into corresponding three values
-    omega : ndarray
+    omega : spmatrix
         Covariance matrix for expected returns for candidates in the cohort for
         selection.
     sires : Any
@@ -549,6 +701,7 @@ def highspy_robust_genetics_sqp(
     z = model.BAR  # TODO replace with HiGHS variable defining code
 
     # construct objective via linear cost and Hessian
+    # TODO sigma and omega split into corresponding three values
     # TODO code for feeding linear term mu-bar of objective into HiGHS
     # TODO code for feeding (lam/2)*Hessian from objective into HiGHS
     # TODO work out how to handle -kappa*z: within linear term?
