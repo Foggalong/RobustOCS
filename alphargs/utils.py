@@ -22,7 +22,8 @@ def print_compare_solutions(
     z1: float | None = None,
     z2: float | None = None,
     name1: str = "First",
-    name2: str = "Second"
+    name2: str = "Second",
+    tol: float | None = None
 ) -> None:
     """
     Given two solutions to a portfolio optimization problem (robust or non-
@@ -50,6 +51,8 @@ def print_compare_solutions(
         Name to use for the first solution in output. Default is `"First"`.
     name2: str, optional
         Name to use for the second solution in output. Default is `"Second"`.
+    tol: float, optional
+        Tolerance below which not to show values. Default is None, all shown.
 
     Examples
     --------
@@ -74,6 +77,10 @@ def print_compare_solutions(
     # HACK header breaks if precision < 3 or len(problem1) != 5
     print(f"i{' '*(order-1)}  {name1}  {' '*(precision-3)}{name2}")
     for candidate in range(dimension):
+        # if a tolerance given, skip if both values less than it
+        if tol and portfolio1[candidate] < tol and portfolio2[candidate] < tol:
+            continue
+
         print(
             f"{candidate+1:0{order}d}  "
             f"{portfolio1[candidate]:.{precision}f}  "
