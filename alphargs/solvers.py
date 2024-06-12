@@ -566,10 +566,9 @@ def highs_standard_genetics(
     if max_duality_gap:
         pass  # NOTE HiGHS doesn't support duality gap, skip
 
-    # model file can be used externally for verification  # BUG not working
+    # model file can be used externally for verification
     if debug:
-        h.setOptionValue('write_model_to_file', True)
-        h.setOptionValue('write_model_file', 'standard-opt.mps')
+        h.writeModel("standard-opt.mps")
 
     h.passModel(model)
     h.run()
@@ -679,7 +678,8 @@ def highs_robust_genetics_sqp(
     """
 
     # initialise an empty model
-    model = highspy.Highs()
+    h = highspy.Highs()
+    model = highspy.HighsModel()
 
     # HiGHS spews all its output into the terminal by default, this restricts
     # that behaviour to only happen when the `debug` flag is used.
@@ -737,8 +737,7 @@ def highs_robust_genetics_sqp(
 
     # model file can be used externally for verification
     if debug:
-        # TODO check if HIGHS has a
-        model.write("robust-sqp-opt.mps")
+        h.writeModel("robust-sqp-opt.mps")
 
     # TODO check how to access objective value
     return np.array(solution), model.ObjVal  # HACK np.array avoids issue #9
