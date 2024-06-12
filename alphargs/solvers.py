@@ -546,22 +546,13 @@ def highs_standard_genetics(
     # HiGHS multiplies Hessian by 1/2 so just need factor of lambda
     model.hessian_.value_ = lam*sigma.data
 
-    # set up the two sum-to-half constraints
-    M = np.zeros((2, dimension), dtype=int)
-    # define the M so that column i is [1;0] if i is a sire and [0;1] otherwise
-    M[0, sires] = 1
-    M[1, dams] = 1
-    M = sparse.csr_matrix(M)  # HACK should directly form CSR format
-    # define the right hand side of the constraint Mx = m
-    m = np.full(2, 0.5)
-
-    # add Mx = m to the model
-    model.lp_.row_lower_ = m
-    model.lp_.row_upper_ = m
+    # add Mx = m to the model using CSR format. for M it's less efficient than
+    # if it were stored densely, but HiGHS requires CSR for input
+    model.lp_.row_lower_ = model.lp_.row_upper_ = np.full(2, 0.5)
     model.lp_.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
-    model.lp_.a_matrix_.start_ = M.indptr
-    model.lp_.a_matrix_.index_ = M.indices
-    model.lp_.a_matrix_.value_ = M.data
+    model.lp_.a_matrix_.start_ = np.array([0, len(sires), dimension])
+    model.lp_.a_matrix_.index_ = np.array(list(sires) + list(dams))
+    model.lp_.a_matrix_.value_ = np.ones(dimension, dtype=int)
 
     # HiGHS spews all its output into the terminal by default, this restricts
     # that behaviour to only happen when the `debug` flag is used.
@@ -708,14 +699,13 @@ def highs_robust_genetics_sqp(
 
     # TODO code for feeding matrix of inequality constraints into HiGHS
 
-    # set up the two sum-to-half constraints
-    M = np.zeros((2, dimension), dtype=int)
-    # define the M so that column i is [1;0] if i is a sire and [0;1] otherwise
-    M[0, sires] = 1
-    M[1, dams] = 1
-    # define the right hand side of the constraint Mx = m
-    m = np.full(2, 0.5, dtype=float)
-    # TODO work out including equality constraints in HiGHS
+    # add Mx = m to the model using CSR format. for M it's less efficient than
+    # if it were stored densely, but HiGHS requires CSR for input
+    model.lp_.row_lower_ = model.lp_.row_upper_ = np.full(2, 0.5)
+    model.lp_.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
+    model.lp_.a_matrix_.start_ = np.array([0, len(sires), dimension])
+    model.lp_.a_matrix_.index_ = np.array(list(sires) + list(dams))
+    model.lp_.a_matrix_.value_ = np.ones(dimension, dtype=int)
 
     # optional controls to stop HiGHS taking too long
     # TODO explore what options HiGHS offers for timeout exiting
