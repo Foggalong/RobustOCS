@@ -579,15 +579,15 @@ def highs_standard_genetics(
     if max_duality_gap:
         pass  # NOTE HiGHS doesn't support duality gap, skip
 
+    h.passModel(model)
+    h.run()
+
     # model file can be used externally for verification
     if debug:
         if type(debug) is str:
             h.writeModel(f"{debug}.mps")
         else:
             h.writeModel("hgs-std-opt.mps")
-
-    h.passModel(model)
-    h.run()
 
     # prints the solution with info about dual values
     if debug:
@@ -617,7 +617,7 @@ def highs_robust_genetics_sqp(
     max_iterations: int = 1000,
     robust_gap_tol: float = 1e-8,
     debug: str | bool = False
-) -> tuple[npt.NDArray[np.float64], float]:
+) -> tuple[npt.NDArray[np.float64], float, float]:
     """
     Solve the robust genetic selection problem using SQP in HiGHS.
 
@@ -644,7 +644,7 @@ def highs_robust_genetics_sqp(
     mubar : ndarray
         Vector of expected values of the expected returns for candidates in the
         cohort for selection.
-    omega : spmatrix
+    omega : spmatrix   # TODO this doesn't *have* to be an spmatrix
         Covariance matrix for expected returns for candidates in the cohort for
         selection.
     sires : Any
@@ -698,63 +698,91 @@ def highs_robust_genetics_sqp(
     h = highspy.Highs()
     model = highspy.HighsModel()
 
+    # use value for infinity from HiGHS
+    inf = highspy.kHighsInf
+
+    model.lp_.model_name_ = "robust-genetics"
+    model.lp_.num_col_ = dimension + 1  # additional column for z
+    model.lp_.num_row_ = 2
+
+    # HiGHS does minimization so negate objective
+    model.lp_.col_cost_ = np.append(-mubar, kappa)
+
+    # bounds on w using a helper function, plus 0 <=z<= inf
+    model.lp_.col_lower_ = np.append(highs_bound_like(mubar, lower_bound), 0)
+    model.lp_.col_upper_ = np.append(highs_bound_like(mubar, upper_bound), inf)
+
+    # define the quadratic term in the objective
+    sigma = sparse.csc_matrix(sigma)  # BUG is sigma in CSR or CSC format?
+    model.hessian_.dim_ = dimension + 1
+    model.hessian_.start_ = np.append(sigma.indptr, dimension + 1)
+    model.hessian_.index_ = sigma.indices
+    # HiGHS multiplies Hessian by 1/2 so just need factor of lambda
+    model.hessian_.value_ = np.append(lam*sigma.data, 0)
+
+    # add Mx = m to the model using CSR format. Note the additional column
+    model.lp_.row_lower_ = model.lp_.row_upper_ = np.array([0.5, 0.5, 0])
+    model.lp_.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
+    model.lp_.a_matrix_.start_ = np.array([0, len(sires), dimension + 1])
+    model.lp_.a_matrix_.index_ = np.array(list(sires) + list(dams))
+    model.lp_.a_matrix_.value_ = np.append(np.ones(dimension, dtype=int), 0)
+
+
     # HiGHS spews all its output into the terminal by default, this restricts
     # that behaviour to only happen when the `debug` flag is used.
     if not debug:
-        pass  # TODO find suppression variable for highspy
-
-    # integrating bounds within variable definitions is more efficient than
-    # as a separate constraint, which Gurobi would convert to bounds anyway
-    w = model.FOO  # TODO replace with HiGHS variable defining code
-    z = model.BAR  # TODO replace with HiGHS variable defining code
-
-    # construct objective via linear cost and Hessian
-    # TODO sigma and omega split into corresponding three values
-    # TODO code for feeding linear term mu-bar of objective into HiGHS
-    # TODO code for feeding (lam/2)*Hessian from objective into HiGHS
-    # TODO work out how to handle -kappa*z: within linear term?
-
-    # TODO code for feeding matrix of inequality constraints into HiGHS
-
-    # add Mx = m to the model using CSR format. for M it's less efficient than
-    # if it were stored densely, but HiGHS requires CSR for input
-    model.lp_.row_lower_ = model.lp_.row_upper_ = np.full(2, 0.5)
-    model.lp_.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
-    model.lp_.a_matrix_.start_ = np.array([0, len(sires), dimension])
-    model.lp_.a_matrix_.index_ = np.array(list(sires) + list(dams))
-    model.lp_.a_matrix_.value_ = np.ones(dimension, dtype=int)
+        h.setOptionValue('output_flag', False)
+        h.setOptionValue('log_to_console', False)
 
     # optional controls to stop HiGHS taking too long
-    # TODO explore what options HiGHS offers for timeout exiting
+    if time_limit:
+        h.setOptionValue('time_limit', time_limit)
+    if max_duality_gap:
+        pass  # NOTE HiGHS doesn't support duality gap, skip
+
+    h.passModel(model)
 
     for i in range(max_iterations):
         # optimization of the model, print weights and objective
-        model.run()
-        solution = model.getSolution()
+        h.run()
 
-        # TODO code for debug print of solution
+        # by default, col_value is a stock-Python list
+        solution: npt.NDArray[np.float64] = np.array(h.getSolution().col_value)
+        w_star = solution[:-1]
+        z_star = solution[-1]
+
+        # we negated the objective function, so negate it back
+        objective_value: float = -h.getInfo().objective_function_value
+
         if debug:
-            pass
+            print(f"{i}: {w_star}, {objective_value:g}")
 
-        # TODO code for checking which constraints are active in HiGHS
+        # assess which constraints are currently active
+        # TODO see if HiGHS can explore active constraints mid-run
 
         # z coefficient for the new constraint
-        w_star: npt.NDArray[np.float64] = np.array(solution)
-
-        # TODO work out how to compute this when Omega in C{R/C}F
         alpha: float = sqrt(w_star.transpose()@omega@w_star)
 
         # if gap between z and w'Omega w has converged, done
-        if abs(z.X - alpha) < robust_gap_tol:
+        if abs(z_star - alpha) < robust_gap_tol:
             break
 
         # add a new plane to the approximation of the uncertainty cone
-        # TODO work out how to add this to an existing HiGHS model
-        model.addConstr(alpha*z >= w_star.transpose()@omega@w, name=f"P{i}")
+        num_nz = dimension + 1  # HACK assuming entirely dense
+        index = np.array(range(dimension + 1))
+        value = np.append(-omega@w_star, alpha)
+        h.addRow(0, inf, num_nz, index, value)
 
     # model file can be used externally for verification
     if debug:
-        h.writeModel("robust-sqp-opt.mps")
+        if type(debug) is str:
+            h.writeModel(f"{debug}.mps")
+        else:
+            h.writeModel("hgs-rob-sqp.mps")
 
-    # TODO check how to access objective value
-    return np.array(solution), model.ObjVal  # HACK np.array avoids issue #9
+    # prints the solution with info about dual values
+    if debug:
+        h.writeSolution("", 1)
+
+    # final value of solution is the z value, return separately
+    return solution[:-1], solution[-1], objective_value
