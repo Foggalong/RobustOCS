@@ -717,10 +717,10 @@ def highs_robust_genetics_sqp(
     # define the quadratic term in the objective
     sigma = sparse.csc_matrix(sigma)  # BUG is sigma in CSR or CSC format?
     model.hessian_.dim_ = dimension + 1
-    model.hessian_.start_ = np.append(sigma.indptr, dimension*dimension)
-    model.hessian_.index_ = sigma.indices
+    model.hessian_.start_ = np.append(sigma.indptr, len(sigma.data))
+    model.hessian_.index_ = np.append(sigma.indices, dimension)
     # HiGHS multiplies Hessian by 1/2 so just need factor of lambda
-    model.hessian_.value_ = lam*sigma.data
+    model.hessian_.value_ = np.append(lam*sigma.data, 0)
 
     # add Mx = m to the model using CSR format. Note the additional column
     model.lp_.row_lower_ = model.lp_.row_upper_ = np.array([0.5, 0.5, 0])
