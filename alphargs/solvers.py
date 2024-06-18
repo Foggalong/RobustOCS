@@ -8,18 +8,22 @@ for solving those under various formulations and methods.
 import numpy as np          # defines matrix structures
 import numpy.typing as npt  # variable typing definitions for NumPy
 import gurobipy as gp       # Gurobi optimization interface
+import highspy              # HiGHS optimization interface
 from math import sqrt       # used within the robust constraint
+from scipy import sparse    # used for sparse matrix format
 
 # controls what's imported on `from alphargs.solvers import *`
 __all__ = [
     "gurobi_standard_genetics",
     "gurobi_robust_genetics",
-    "gurobi_robust_genetics_sqp"
+    "gurobi_robust_genetics_sqp",
+    "highs_standard_genetics",
+    "highs_robust_genetics_sqp"
 ]
 
 
 def gurobi_standard_genetics(
-    sigma: npt.NDArray[np.float64],
+    sigma: npt.NDArray[np.float64] | sparse.spmatrix,
     mu: npt.NDArray[np.float64],
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
@@ -29,7 +33,7 @@ def gurobi_standard_genetics(
     lower_bound: npt.NDArray[np.float64] | float = 0.0,
     time_limit: float | None = None,
     max_duality_gap: float | None = None,
-    debug: bool = False
+    debug: str | bool = False
 ) -> tuple[npt.NDArray[np.float64], float]:
     """
     Solve the standard genetic selection problem using Gurobi.
@@ -47,7 +51,7 @@ def gurobi_standard_genetics(
 
     Parameters
     ----------
-    sigma : ndarray
+    sigma : ndarray or spmatrix
         Covariance matrix of the candidates in the cohorts for selection.
     mu : ndarray
         Vector of expected returns for candidates in the cohorts for selection.
@@ -77,10 +81,11 @@ def gurobi_standard_genetics(
     max_duality_gap : float or None, optional
         Maximum allowable duality gap to give Gurobi when solving the problem.
         Default value is `None`, i.e. do not allow any duality gap.
-    debug : bool, optional
+    debug : str or bool, optional
         Flag which controls both whether Gurobi prints its output to terminal
-        and whether it saves the model file to the working directory (filename
-        is hardcoded as `standard-opt.mps`). Default value is `False.
+        and whether it saves the model file to the working directory. If given
+        as a string, that string is used as the model output name, 'str.mps',
+        or if boolean `True` then `grb-std-opt.mps`. Default value is `False`.
 
     Returns
     -------
@@ -126,16 +131,19 @@ def gurobi_standard_genetics(
 
     # model file can be used externally for verification
     if debug:
-        model.write("standard-opt.mps")
+        if type(debug) is str:
+            model.write(f"{debug}.mps")
+        else:
+            model.write("grb-std-opt.mps")
 
     model.optimize()
     return np.array(w.X), model.ObjVal  # HACK np.array avoids issue #9
 
 
 def gurobi_robust_genetics(
-    sigma: npt.NDArray[np.float64],
+    sigma: npt.NDArray[np.float64] | sparse.spmatrix,
     mubar: npt.NDArray[np.float64],
-    omega: npt.NDArray[np.float64],
+    omega: npt.NDArray[np.float64] | sparse.spmatrix,
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
     lam: float,  # cannot be called `lambda`, that's reserved in Python
@@ -145,7 +153,7 @@ def gurobi_robust_genetics(
     lower_bound: npt.NDArray[np.float64] | float = 0.0,
     time_limit: float | None = None,
     max_duality_gap: float | None = None,
-    debug: bool = False
+    debug: str | bool = False
 ) -> tuple[npt.NDArray[np.float64], float, float]:
     """
     Solve the robust genetic selection problem using Gurobi.
@@ -168,12 +176,12 @@ def gurobi_robust_genetics(
 
     Parameters
     ----------
-    sigma : ndarray
+    sigma : ndarray or spmatrix
         Covariance matrix of the candidates in the cohorts for selection.
     mubar : ndarray
         Vector of expected values of the expected returns for candidates in the
         cohort for selection.
-    omega : ndarray
+    omega : ndarray or spmatrix
         Covariance matrix for expected returns for candidates in the cohort for
         selection.
     sires : Any
@@ -205,10 +213,11 @@ def gurobi_robust_genetics(
     max_duality_gap : float or None, optional
         Maximum allowable duality gap to give Gurobi when solving the problem.
         Default value is `None`, i.e. do not allow any duality gap.
-    debug : bool, optional
+    debug : str or bool, optional
         Flag which controls both whether Gurobi prints its output to terminal
-        and whether it saves the model file to the working directory (filename
-        is hardcoded as `standard-opt.mps`). Default value is `False.
+        and whether it saves the model file to the working directory. If given
+        as a string, that string is used as the model output name, 'str.mps',
+        or if boolean `True` then `grb-rob-opt.mps`. Default value is `False`.
 
     Returns
     -------
@@ -261,16 +270,19 @@ def gurobi_robust_genetics(
 
     # model file can be used externally for verification
     if debug:
-        model.write("robust-opt.mps")
+        if type(debug) is str:
+            model.write(f"{debug}.mps")
+        else:
+            model.write("grb-rob-opt.mps")
 
     model.optimize()
     return np.array(w.X), z.X, model.ObjVal  # HACK np.array avoids issue #9
 
 
 def gurobi_robust_genetics_sqp(
-    sigma: npt.NDArray[np.float64],
+    sigma: npt.NDArray[np.float64] | sparse.spmatrix,
     mubar: npt.NDArray[np.float64],
-    omega: npt.NDArray[np.float64],
+    omega: npt.NDArray[np.float64] | sparse.spmatrix,
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
     lam: float,  # cannot be called `lambda`, that's reserved in Python
@@ -281,8 +293,8 @@ def gurobi_robust_genetics_sqp(
     time_limit: float | None = None,
     max_duality_gap: float | None = None,
     max_iterations: int = 1000,
-    robust_gap_tol: float = 1e-8,
-    debug: bool = False
+    robust_gap_tol: float = 1e-7,
+    debug: str | bool = False
 ) -> tuple[npt.NDArray[np.float64], float, float]:
     """
     Solve the robust genetic selection problem using SQP in Gurobi.
@@ -305,12 +317,12 @@ def gurobi_robust_genetics_sqp(
 
     Parameters
     ----------
-    sigma : ndarray
+    sigma : ndarray or spmatrix
         Covariance matrix of the candidates in the cohorts for selection.
     mubar : ndarray
         Vector of expected values of the expected returns for candidates in the
         cohort for selection.
-    omega : ndarray
+    omega : ndarray or spmatrix
         Covariance matrix for expected returns for candidates in the cohort for
         selection.
     sires : Any
@@ -349,11 +361,12 @@ def gurobi_robust_genetics_sqp(
         constraint. Default value is `1000`.
     robust_gap_tol : float, optional
         Tolerance when checking whether an approximating constraint is active
-        and whether the SQP overall has converged. Default value is 10^-8.
-    debug : bool, optional
+        and whether the SQP overall has converged. Default value is 10^-7.
+    debug : str or bool, optional
         Flag which controls both whether Gurobi prints its output to terminal
-        and whether it saves the model file to the working directory (filename
-        is hardcoded as `standard-opt.mps`). Default value is `False.
+        and whether it saves the model file to the working directory. If given
+        as a string, that string is used as the model output name, 'str.mps',
+        or if boolean `True` then `grb-rob-sqp.mps`. Default value is `False`.
 
     Returns
     -------
@@ -430,6 +443,351 @@ def gurobi_robust_genetics_sqp(
 
     # model file can be used externally for verification
     if debug:
-        model.write("robust-sqp-opt.mps")
+        if type(debug) is str:
+            model.write(f"{debug}.mps")
+        else:
+            model.write("grb-rob-sqp.mps")
 
     return np.array(w.X), z.X, model.ObjVal  # HACK np.array avoids issue #9
+
+
+def highs_bound_like(vector: npt.NDArray[np.float64],
+                     value: float | npt.NDArray[np.float64]
+                     ) -> npt.NDArray[np.float64]:
+    """
+    Helper function which allows HiGHS to interpret variable bounds specified
+    either as a vector or a single floating point value. If `value` is an array
+    will just return that array. If `value` is a float, it'll return a NumPy
+    array in the shape of `vector` with every entry being `value`.
+    """
+    return np.full_like(vector, value) if type(value) is float else value
+
+
+def highs_standard_genetics(
+    sigma: sparse.spmatrix,
+    mu: npt.NDArray[np.float64],
+    sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
+    dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
+    lam: float,  # cannot be called `lambda`, that's reserved in Python
+    dimension: int,
+    upper_bound: npt.NDArray[np.float64] | float = 1.0,
+    lower_bound: npt.NDArray[np.float64] | float = 0.0,
+    time_limit: float | None = None,
+    max_duality_gap: float | None = None,
+    debug: str | bool = False
+) -> tuple[npt.NDArray[np.float64], float]:
+    """
+    Solve the standard genetic selection problem using HiGHS.
+
+    Given a standard genetic selection problem
+    ```
+        max_w w'mu - (lambda/2)*w'*sigma*w
+        subject to lb <= w <= ub,
+                   w_S*e_S = 1/2,
+                   w_D*e_D = 1/2,
+    ```
+    this function uses HiGHS to find the optimum w and the objective for that
+    portfolio. Additional parameters give control over long HiGHS can spend
+    on the problem, to prevent indefinite hangs.
+
+    Parameters
+    ----------
+    sigma : spmatrix
+        Covariance matrix of the candidates in the cohorts for selection.
+    mu : ndarray
+        Vector of expected returns for candidates in the cohorts for selection.
+    sires : Any
+        An object representing an index set for sires (male candidates) in the
+        cohort. Type is not restricted.
+    dams : Any
+        An object representing an index set for dams (female candidates) in the
+        cohort. Type is not restricted.
+    lam : float
+        Lambda value to optimize for, which controls the balance between risk
+        and return. Lower values will give riskier portfolios, higher values
+        more conservative ones.
+    dimension : int
+        Number of candidates in the cohort, i.e. the dimension of the problem.
+    upper_bound : ndarray or float, optional
+        Upper bound on how much each candidate can contribute. Can be an array
+        of differing bounds for each candidate, or a float which applies to all
+        candidates. Default value is `1.0`.
+    lower_bound : ndarray or float, optional
+        Lower bound on how much each candidate can contribute. Can be an array
+        of differing bounds for each candidate, or a float which applies to all
+        candidates. Default value is `0.0`.
+    time_limit : float or None, optional
+        Maximum amount of time in seconds to give HiGHS to solve the problem.
+        Default value is `None`, i.e. no time limit.
+    max_duality_gap : float or None, optional
+        HiGHS does not support a tolerance on duality gap for this type of
+        problem, so regardless whether specified the value will be ignored.
+    debug : str or bool, optional
+        Flag which controls both whether Gurobi prints its output to terminal
+        and whether it saves the model file to the working directory. If given
+        as a string, that string is used as the model output name, 'str.mps',
+        or if boolean `True` then `hgs-std-opt.mps`. Default value is `False`.
+
+    Returns
+    -------
+    ndarray
+        Portfolio vector which HiGHS has determined is a solution.
+    float
+        Value of the objective function for returned solution vector.
+    """
+
+    # initialise an empty model
+    h = highspy.Highs()
+    model = highspy.HighsModel()
+
+    # NOTE HiGHS doesn't support typing for model parameters
+    model.lp_.model_name_ = "standard-genetics"
+    model.lp_.num_col_ = dimension
+    model.lp_.num_row_ = 2
+
+    # HiGHS does minimization so negate objective
+    model.lp_.col_cost_ = -mu
+
+    # bounds on w using a helper function
+    model.lp_.col_lower_ = highs_bound_like(mu, lower_bound)
+    model.lp_.col_upper_ = highs_bound_like(mu, upper_bound)
+
+    # define the quadratic term in the objective
+    sigma = sparse.csc_matrix(sigma)  # BUG is sigma in CSR or CSC format?
+    model.hessian_.dim_ = dimension
+    model.hessian_.start_ = sigma.indptr
+    model.hessian_.index_ = sigma.indices
+    # HiGHS multiplies Hessian by 1/2 so just need factor of lambda
+    model.hessian_.value_ = lam*sigma.data
+
+    # add Mx = m to the model using CSR format. for M it's less efficient than
+    # if it were stored densely, but HiGHS requires CSR for input
+    model.lp_.row_lower_ = model.lp_.row_upper_ = np.full(2, 0.5)
+    model.lp_.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
+    model.lp_.a_matrix_.start_ = np.array([0, len(sires), dimension])
+    model.lp_.a_matrix_.index_ = np.array(list(sires) + list(dams))
+    model.lp_.a_matrix_.value_ = np.ones(dimension, dtype=int)
+
+    # HiGHS spews all its output into the terminal by default, this restricts
+    # that behaviour to only happen when the `debug` flag is used.
+    if not debug:
+        h.setOptionValue('output_flag', False)
+        h.setOptionValue('log_to_console', False)
+
+    # optional controls to stop HiGHS taking too long
+    if time_limit:
+        h.setOptionValue('time_limit', time_limit)
+    if max_duality_gap:
+        pass  # NOTE HiGHS doesn't support duality gap, skip
+
+    h.passModel(model)
+    h.run()
+
+    # model file can be used externally for verification
+    if debug:
+        if type(debug) is str:
+            h.writeModel(f"{debug}.mps")
+        else:
+            h.writeModel("hgs-std-opt.mps")
+
+    # prints the solution with info about dual values
+    if debug:
+        h.writeSolution("", 1)
+
+    # by default, col_value is a stock-Python list
+    solution: npt.NDArray[np.float64] = np.array(h.getSolution().col_value)
+    # we negated the objective function, so negate it back
+    objective_value: float = -h.getInfo().objective_function_value
+
+    return solution, objective_value
+
+
+def highs_robust_genetics_sqp(
+    sigma: sparse.spmatrix,
+    mubar: npt.NDArray[np.float64],
+    omega: npt.NDArray[np.float64] | sparse.spmatrix,
+    sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
+    dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
+    lam: float,  # cannot be called `lambda`, that's reserved in Python
+    kappa: float,
+    dimension: int,
+    upper_bound: npt.NDArray[np.float64] | float = 1.0,
+    lower_bound: npt.NDArray[np.float64] | float = 0.0,
+    time_limit: float | None = None,
+    max_duality_gap: float | None = None,
+    max_iterations: int = 1000,
+    robust_gap_tol: float = 1e-7,
+    debug: str | bool = False
+) -> tuple[npt.NDArray[np.float64], float, float]:
+    """
+    Solve the robust genetic selection problem using SQP in HiGHS.
+
+    Given a robust genetic selection problem
+    ```
+        max_w (min_mu w'mu subject to mu in U) - (lambda/2)*w'*sigma*w
+        subject to lb <= w <= ub,
+                   w_S*e_S = 1/2,
+                   w_D*e_D = 1/2,
+    ```
+    where U is a quadratic uncertainty set for mu~N(mubar, omega), this
+    function uses HiGHS to find the optimum w and the objective for that
+    portfolio. It does this using sequential quadratic programming (SQP),
+    approximating the conic constraint associated with robustness using
+    a series of linear constraints.
+
+    NOTE: unlike Gurobi, this doesn't yet have controls for `time_limit`
+    or `max_duality_gap` to be passed to HiGHS.
+
+    Parameters
+    ----------
+    sigma : spmatrix
+        Covariance matrix of the candidates in the cohorts for selection.
+    mubar : ndarray
+        Vector of expected values of the expected returns for candidates in the
+        cohort for selection.
+    omega : ndarray or spmatrix   # TODO this doesn't *have* to be an spmatrix
+        Covariance matrix for expected returns for candidates in the cohort for
+        selection.
+    sires : Any
+        An object representing an index set for sires (male candidates) in the
+        cohort. Type is not restricted.
+    dams : Any
+        An object representing an index set for dams (female candidates) in the
+        cohort. Type is not restricted.
+    lam : float
+        Lambda value to optimize for, which controls the balance between risk
+        and return. Lower values will give riskier portfolios, higher values
+        more conservative ones.
+    kappa : float
+        Kappa value to optimize for, which controls how resilient the solution
+        must be to variation in expected values.
+    dimension : int
+        Number of candidates in the cohort, i.e. the dimension of the problem.
+    upper_bound : ndarray or float, optional
+        Upper bound on how much each candidate can contribute. Can be an array
+        of differing bounds for each candidate, or a float which applies to all
+        candidates. Default value is `1.0`.
+    lower_bound : ndarray or float, optional
+        Lower bound on how much each candidate can contribute. Can be an array
+        of differing bounds for each candidate, or a float which applies to all
+        candidates. Default value is `0.0`.
+    max_iterations : int, optional
+        Maximum number of iterations that can be taken in solving the problem,
+        i.e. the maximum number of constraints to use to approximate the conic
+        constraint. Default value is `1000`.
+    robust_gap_tol : float, optional
+        Tolerance when checking whether an approximating constraint is active
+        and whether the SQP overall has converged. Default value is 10^-7.
+    debug : str or bool, optional
+        Flag which controls both whether Gurobi prints its output to terminal
+        and whether it saves the model file to the working directory. If given
+        as a string, that string is used as the model output name, 'str.mps',
+        or if boolean `True` then `grb-rob-sqp.mps`. Default value is `False`.
+
+    Returns
+    -------
+    ndarray
+        Portfolio vector which Gurobi has determined is a solution.
+    float
+        Auxillary variable corresponding to uncertainty associated with the
+        portfolio vector which Gurobi has determined is a solution.
+    float
+        Value of the objective function for returned solution vector.
+    """
+
+    # initialise an empty model
+    h = highspy.Highs()
+    model = highspy.HighsModel()
+
+    # use value for infinity from HiGHS
+    inf = highspy.kHighsInf
+
+    # NOTE HiGHS doesn't support typing for model parameters
+    model.lp_.model_name_ = "robust-genetics"
+    model.lp_.num_col_ = dimension + 1  # additional column for z
+    model.lp_.num_row_ = 2
+
+    # HiGHS does minimization so negate objective
+    model.lp_.col_cost_ = np.append(-mubar, kappa)
+
+    # bounds on w using a helper function, plus 0 <= z <= inf
+    model.lp_.col_lower_ = np.append(highs_bound_like(mubar, lower_bound), 0)
+    model.lp_.col_upper_ = np.append(highs_bound_like(mubar, upper_bound), inf)
+
+    # define the quadratic term in the objective
+    sigma = sparse.csc_matrix(sigma)  # BUG is sigma in CSR or CSC format?
+    model.hessian_.dim_ = dimension + 1
+    model.hessian_.start_ = np.append(sigma.indptr, len(sigma.data))
+    model.hessian_.index_ = np.append(sigma.indices, dimension)
+    # HiGHS multiplies Hessian by 1/2 so just need factor of lambda
+    model.hessian_.value_ = np.append(lam*sigma.data, 0)
+
+    # add Mx = m to the model using CSR format. Note the additional column
+    model.lp_.row_lower_ = model.lp_.row_upper_ = np.array([0.5, 0.5, 0])
+    model.lp_.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
+    model.lp_.a_matrix_.start_ = np.array([0, len(sires), dimension + 1])
+    model.lp_.a_matrix_.index_ = np.array(list(sires) + list(dams) + [dimension])
+    model.lp_.a_matrix_.value_ = np.append(np.ones(dimension, dtype=int), 0)
+
+    # BUG should be able to use this to add `z` to the model, but isn't working
+    # h.addVar(0, highspy.kHighsInf)
+    # h.changeColCost(dimension, kappa)
+
+    # HiGHS spews all its output into the terminal by default, this restricts
+    # that behaviour to only happen when the `debug` flag is used.
+    if not debug:
+        h.setOptionValue('output_flag', False)
+        h.setOptionValue('log_to_console', False)
+
+    # optional controls to stop HiGHS taking too long
+    if time_limit:
+        h.setOptionValue('time_limit', time_limit)
+    if max_duality_gap:
+        pass  # NOTE HiGHS doesn't support duality gap, skip
+
+    h.passModel(model)  # TODO add checks on exit codes
+
+    for i in range(max_iterations):
+        # optimization of the model, print weights and objective
+        h.run()  # TODO add checks on exit codes
+
+        # by default, col_value is a stock-Python list
+        solution: npt.NDArray[np.float64] = np.array(h.getSolution().col_value)
+        w_star: npt.NDArray[np.float64] = solution[:-1]
+        z_star: float = solution[-1]
+
+        # we negated the objective function, so negate it back
+        objective_value: float = -h.getInfo().objective_function_value
+
+        if debug:
+            print(f"{i}: {w_star}, {objective_value:g}")
+
+        # assess which constraints are currently active
+        # TODO see if HiGHS can explore active constraints mid-run
+
+        # z coefficient for the new constraint
+        alpha: float = sqrt(w_star.transpose()@omega@w_star)
+
+        # if gap between z and w'Omega w has converged, done
+        if abs(z_star - alpha) < robust_gap_tol:
+            break
+
+        # add a new plane to the approximation of the uncertainty cone
+        num_nz: int = dimension + 1  # HACK assuming entirely dense
+        index: npt.NDArray[np.int8] = np.array(range(dimension + 1))
+        value: npt.NDArray[np.float64] = np.append(-omega@w_star, alpha)
+        h.addRow(0, inf, num_nz, index, value)
+
+    # model file can be used externally for verification
+    if debug:
+        if type(debug) is str:
+            h.writeModel(f"{debug}.mps")
+        else:
+            h.writeModel("hgs-rob-sqp.mps")
+
+    # prints the solution with info about dual values
+    if debug:
+        h.writeSolution("", 1)
+
+    # final value of solution is the z value, return separately
+    return w_star, z_star, objective_value

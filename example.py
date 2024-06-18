@@ -6,7 +6,8 @@ import alphargs
 sigma, mubar, omega, n = alphargs.load_problem(
     "examples/04/A04.txt",
     "examples/04/EBV04.txt",
-    "examples/04/S04.txt"
+    "examples/04/S04.txt",
+    issparse=True
 )
 
 # NOTE this trick of handling sex data is specific to the initial simulation
@@ -19,9 +20,9 @@ lam = 0.5
 kap = 1
 
 # computes the standard and robust genetic selection solutions
-w_std, obj_std = alphargs.gurobi_standard_genetics(
+w_std, obj_std = alphargs.highs_standard_genetics(
     sigma, mubar, sires, dams, lam, n)
-w_rbs, z_rbs, obj_rbs = alphargs.gurobi_robust_genetics(
+w_rbs, z_rbs, obj_rbs = alphargs.highs_robust_genetics_sqp(
     sigma, mubar, omega, sires, dams, lam, kap, n)
 
 alphargs.print_compare_solutions(
