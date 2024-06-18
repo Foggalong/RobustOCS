@@ -107,7 +107,7 @@ def check_uncertainty_constraint(
     z: float,
     w: npt.NDArray[np.float64],
     omega: npt.NDArray[np.float64],
-    tol: float = 1e-8,
+    tol: float = 1e-7,
     debug: bool = False
 ) -> bool:
     """

@@ -293,7 +293,7 @@ def gurobi_robust_genetics_sqp(
     time_limit: float | None = None,
     max_duality_gap: float | None = None,
     max_iterations: int = 1000,
-    robust_gap_tol: float = 1e-8,
+    robust_gap_tol: float = 1e-7,
     debug: str | bool = False
 ) -> tuple[npt.NDArray[np.float64], float, float]:
     """
@@ -361,7 +361,7 @@ def gurobi_robust_genetics_sqp(
         constraint. Default value is `1000`.
     robust_gap_tol : float, optional
         Tolerance when checking whether an approximating constraint is active
-        and whether the SQP overall has converged. Default value is 10^-8.
+        and whether the SQP overall has converged. Default value is 10^-7.
     debug : str or bool, optional
         Flag which controls both whether Gurobi prints its output to terminal
         and whether it saves the model file to the working directory. If given
@@ -604,7 +604,7 @@ def highs_standard_genetics(
 def highs_robust_genetics_sqp(
     sigma: sparse.spmatrix,
     mubar: npt.NDArray[np.float64],
-    omega: sparse.spmatrix,
+    omega: npt.NDArray[np.float64] | sparse.spmatrix,
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
     lam: float,  # cannot be called `lambda`, that's reserved in Python
@@ -615,7 +615,7 @@ def highs_robust_genetics_sqp(
     time_limit: float | None = None,
     max_duality_gap: float | None = None,
     max_iterations: int = 1000,
-    robust_gap_tol: float = 1e-8,
+    robust_gap_tol: float = 1e-7,
     debug: str | bool = False
 ) -> tuple[npt.NDArray[np.float64], float, float]:
     """
@@ -644,7 +644,7 @@ def highs_robust_genetics_sqp(
     mubar : ndarray
         Vector of expected values of the expected returns for candidates in the
         cohort for selection.
-    omega : spmatrix   # TODO this doesn't *have* to be an spmatrix
+    omega : ndarray or spmatrix   # TODO this doesn't *have* to be an spmatrix
         Covariance matrix for expected returns for candidates in the cohort for
         selection.
     sires : Any
@@ -676,7 +676,7 @@ def highs_robust_genetics_sqp(
         constraint. Default value is `1000`.
     robust_gap_tol : float, optional
         Tolerance when checking whether an approximating constraint is active
-        and whether the SQP overall has converged. Default value is 10^-8.
+        and whether the SQP overall has converged. Default value is 10^-7.
     debug : str or bool, optional
         Flag which controls both whether Gurobi prints its output to terminal
         and whether it saves the model file to the working directory. If given
@@ -708,25 +708,28 @@ def highs_robust_genetics_sqp(
     # HiGHS does minimization so negate objective
     model.lp_.col_cost_ = np.append(-mubar, kappa)
 
-    # bounds on w using a helper function, plus 0 <=z<= inf
+    # bounds on w using a helper function, plus 0 <= z <= inf
     model.lp_.col_lower_ = np.append(highs_bound_like(mubar, lower_bound), 0)
     model.lp_.col_upper_ = np.append(highs_bound_like(mubar, upper_bound), inf)
 
     # define the quadratic term in the objective
     sigma = sparse.csc_matrix(sigma)  # BUG is sigma in CSR or CSC format?
     model.hessian_.dim_ = dimension + 1
-    model.hessian_.start_ = np.append(sigma.indptr, dimension + 1)
+    model.hessian_.start_ = np.append(sigma.indptr, dimension*dimension)
     model.hessian_.index_ = sigma.indices
     # HiGHS multiplies Hessian by 1/2 so just need factor of lambda
-    model.hessian_.value_ = np.append(lam*sigma.data, 0)
+    model.hessian_.value_ = lam*sigma.data
 
     # add Mx = m to the model using CSR format. Note the additional column
     model.lp_.row_lower_ = model.lp_.row_upper_ = np.array([0.5, 0.5, 0])
     model.lp_.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
     model.lp_.a_matrix_.start_ = np.array([0, len(sires), dimension + 1])
-    model.lp_.a_matrix_.index_ = np.array(list(sires) + list(dams))
+    model.lp_.a_matrix_.index_ = np.array(list(sires) + list(dams) + [dimension])
     model.lp_.a_matrix_.value_ = np.append(np.ones(dimension, dtype=int), 0)
 
+    # BUG should be able to use this to add `z` to the model, but isn't working
+    # h.addVar(0, highspy.kHighsInf)
+    # h.changeColCost(dimension, kappa)
 
     # HiGHS spews all its output into the terminal by default, this restricts
     # that behaviour to only happen when the `debug` flag is used.
