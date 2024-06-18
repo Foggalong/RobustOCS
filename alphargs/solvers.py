@@ -540,6 +540,7 @@ def highs_standard_genetics(
     h = highspy.Highs()
     model = highspy.HighsModel()
 
+    # NOTE HiGHS doesn't support typing for model parameters
     model.lp_.model_name_ = "standard-genetics"
     model.lp_.num_col_ = dimension
     model.lp_.num_row_ = 2
@@ -594,9 +595,9 @@ def highs_standard_genetics(
         h.writeSolution("", 1)
 
     # by default, col_value is a stock-Python list
-    solution = np.array(h.getSolution().col_value)
+    solution: npt.NDArray[np.float64] = np.array(h.getSolution().col_value)
     # we negated the objective function, so negate it back
-    objective_value = -h.getInfo().objective_function_value
+    objective_value: float = -h.getInfo().objective_function_value
 
     return solution, objective_value
 
@@ -701,6 +702,7 @@ def highs_robust_genetics_sqp(
     # use value for infinity from HiGHS
     inf = highspy.kHighsInf
 
+    # NOTE HiGHS doesn't support typing for model parameters
     model.lp_.model_name_ = "robust-genetics"
     model.lp_.num_col_ = dimension + 1  # additional column for z
     model.lp_.num_row_ = 2
@@ -751,8 +753,8 @@ def highs_robust_genetics_sqp(
 
         # by default, col_value is a stock-Python list
         solution: npt.NDArray[np.float64] = np.array(h.getSolution().col_value)
-        w_star = solution[:-1]
-        z_star = solution[-1]
+        w_star: npt.NDArray[np.float64] = solution[:-1]
+        z_star: float = solution[-1]
 
         # we negated the objective function, so negate it back
         objective_value: float = -h.getInfo().objective_function_value
@@ -771,9 +773,9 @@ def highs_robust_genetics_sqp(
             break
 
         # add a new plane to the approximation of the uncertainty cone
-        num_nz = dimension + 1  # HACK assuming entirely dense
-        index = np.array(range(dimension + 1))
-        value = np.append(-omega@w_star, alpha)
+        num_nz: int = dimension + 1  # HACK assuming entirely dense
+        index: npt.NDArray[np.int8] = np.array(range(dimension + 1))
+        value: npt.NDArray[np.float64] = np.append(-omega@w_star, alpha)
         h.addRow(0, inf, num_nz, index, value)
 
     # model file can be used externally for verification
@@ -788,4 +790,4 @@ def highs_robust_genetics_sqp(
         h.writeSolution("", 1)
 
     # final value of solution is the z value, return separately
-    return solution[:-1], solution[-1], objective_value
+    return w_star, z_star, objective_value
