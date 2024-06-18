@@ -8,6 +8,7 @@ portfolios produced by the solvers.
 import math                 # used for math.sqrt
 import numpy as np          # defines matrix structures
 import numpy.typing as npt  # variable typing definitions for NumPy
+from scipy import sparse    # used for sparse matrix format
 
 # controls what's imported on `from alphargs.utils import *`
 __all__ = ["print_compare_solutions", "check_uncertainty_constraint"]
@@ -106,7 +107,7 @@ def print_compare_solutions(
 def check_uncertainty_constraint(
     z: float,
     w: npt.NDArray[np.float64],
-    omega: npt.NDArray[np.float64],
+    omega: npt.NDArray[np.float64] | sparse.spmatrix,
     tol: float = 1e-7,
     debug: bool = False
 ) -> bool:

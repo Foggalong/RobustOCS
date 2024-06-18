@@ -745,11 +745,11 @@ def highs_robust_genetics_sqp(
     if max_duality_gap:
         pass  # NOTE HiGHS doesn't support duality gap, skip
 
-    h.passModel(model)
+    h.passModel(model)  # TODO add checks on exit codes
 
     for i in range(max_iterations):
         # optimization of the model, print weights and objective
-        h.run()
+        h.run()  # TODO add checks on exit codes
 
         # by default, col_value is a stock-Python list
         solution: npt.NDArray[np.float64] = np.array(h.getSolution().col_value)
