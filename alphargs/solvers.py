@@ -704,34 +704,36 @@ def highs_robust_genetics_sqp(
 
     # NOTE HiGHS doesn't support typing for model parameters
     model.lp_.model_name_ = "robust-genetics"
-    model.lp_.num_col_ = dimension + 1  # additional column for z
+    model.lp_.num_col_ = dimension
     model.lp_.num_row_ = 2
 
     # HiGHS does minimization so negate objective
-    model.lp_.col_cost_ = np.append(-mubar, kappa)
+    model.lp_.col_cost_ = -mubar
 
-    # bounds on w using a helper function, plus 0 <= z <= inf
-    model.lp_.col_lower_ = np.append(highs_bound_like(mubar, lower_bound), 0)
-    model.lp_.col_upper_ = np.append(highs_bound_like(mubar, upper_bound), inf)
+    # bounds on w using a helper function
+    model.lp_.col_lower_ = highs_bound_like(mubar, lower_bound)
+    model.lp_.col_upper_ = highs_bound_like(mubar, upper_bound)
 
     # define the quadratic term in the objective
     sigma = sparse.csc_matrix(sigma)  # BUG is sigma in CSR or CSC format?
-    model.hessian_.dim_ = dimension + 1
-    model.hessian_.start_ = np.append(sigma.indptr, len(sigma.data))
-    model.hessian_.index_ = np.append(sigma.indices, dimension)
-    # HiGHS multiplies Hessian by 1/2 so just need factor of lambda
-    model.hessian_.value_ = np.append(lam*sigma.data, 0)
+    model.hessian_.dim_ = dimension
+    model.hessian_.start_ = sigma.indptr
+    model.hessian_.index_ = sigma.indices
+    # # # HiGHS multiplies Hessian by 1/2 so just need factor of lambda
+    model.hessian_.value_ = lam*sigma.data
 
-    # add Mx = m to the model using CSR format. Note the additional column
-    model.lp_.row_lower_ = model.lp_.row_upper_ = np.array([0.5, 0.5, 0])
+    # add Mx = m to the model using CSR format
+    model.lp_.row_lower_ = model.lp_.row_upper_ = np.full(2, 0.5)
     model.lp_.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
-    model.lp_.a_matrix_.start_ = np.array([0, len(sires), dimension + 1])
-    model.lp_.a_matrix_.index_ = np.array(list(sires) + list(dams) + [dimension])
-    model.lp_.a_matrix_.value_ = np.append(np.ones(dimension, dtype=int), 0)
+    model.lp_.a_matrix_.start_ = np.array([0, len(sires), dimension])
+    model.lp_.a_matrix_.index_ = np.array(list(sires) + list(dams))
+    model.lp_.a_matrix_.value_ = np.ones(dimension, dtype=int)
 
-    # BUG should be able to use this to add `z` to the model, but isn't working
-    # h.addVar(0, highspy.kHighsInf)
-    # h.changeColCost(dimension, kappa)
+    h.passModel(model)  # TODO add checks on exit codes
+
+    # add z variable with bound 0 < z < inf and cost kappa
+    h.addVar(0, highspy.kHighsInf)
+    h.changeColCost(dimension, kappa)
 
     # HiGHS spews all its output into the terminal by default, this restricts
     # that behaviour to only happen when the `debug` flag is used.
@@ -744,8 +746,6 @@ def highs_robust_genetics_sqp(
         h.setOptionValue('time_limit', time_limit)
     if max_duality_gap:
         pass  # NOTE HiGHS doesn't support duality gap, skip
-
-    h.passModel(model)  # TODO add checks on exit codes
 
     for i in range(max_iterations):
         # optimization of the model, print weights and objective
