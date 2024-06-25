@@ -805,7 +805,15 @@ def highs_robust_genetics_sqp(
             print(f"{i}: {w_star}, {objective_value:g}")
 
         # assess which constraints are currently active
-        # TODO utilize HiGHS' getBasis.row_status to explore this
+        active_const: bool = False
+        constraints = h.getBasis().row_status
+        for c in range(len(constraints)-2):  # first two are sum-to-half
+            if constraints[c+2] == highspy.HighsBasisStatus.kBasic:
+                active_const = True
+                if debug:
+                    print(f"P{c} active")  # don't have slack values
+        if debug and not active_const:
+            print("No active constraints!")
 
         # z coefficient for the new constraint
         alpha: float = sqrt(w_star.transpose()@omega@w_star)
