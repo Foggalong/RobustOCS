@@ -451,16 +451,17 @@ def gurobi_robust_genetics_sqp(
     return np.array(w.X), z.X, model.ObjVal  # HACK np.array avoids issue #9
 
 
-def highs_bound_like(vector: npt.NDArray[np.float64],
-                     value: float | npt.NDArray[np.float64]
-                     ) -> npt.NDArray[np.float64]:
+def highs_bound_like(dimension: int,
+                     value: float | list[float] | npt.NDArray[np.float64]
+                     ):  # -> npt.NDArray[np.float64] | list[float] # BUG broke
     """
     Helper function which allows HiGHS to interpret variable bounds specified
     either as a vector or a single floating point value. If `value` is an array
     will just return that array. If `value` is a float, it'll return a NumPy
     array in the shape of `vector` with every entry being `value`.
     """
-    return np.full_like(vector, value) if type(value) is float else value
+
+    return [value]*dimension if type(value) is float else value
 
 
 def highs_standard_genetics(
@@ -470,8 +471,8 @@ def highs_standard_genetics(
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
     lam: float,  # cannot be called `lambda`, that's reserved in Python
     dimension: int,
-    upper_bound: npt.NDArray[np.float64] | float = 1.0,
-    lower_bound: npt.NDArray[np.float64] | float = 0.0,
+    upper_bound: npt.NDArray[np.float64] | list[float] | float = 1.0,
+    lower_bound: npt.NDArray[np.float64] | list[float] | float = 0.0,
     time_limit: float | None = None,
     max_duality_gap: float | None = None,
     debug: str | bool = False
@@ -508,11 +509,11 @@ def highs_standard_genetics(
         more conservative ones.
     dimension : int
         Number of candidates in the cohort, i.e. the dimension of the problem.
-    upper_bound : ndarray or float, optional
+    upper_bound : ndarray, list, or float, optional
         Upper bound on how much each candidate can contribute. Can be an array
         of differing bounds for each candidate, or a float which applies to all
         candidates. Default value is `1.0`.
-    lower_bound : ndarray or float, optional
+    lower_bound : ndarray, list, or float, optional
         Lower bound on how much each candidate can contribute. Can be an array
         of differing bounds for each candidate, or a float which applies to all
         candidates. Default value is `0.0`.
@@ -549,8 +550,8 @@ def highs_standard_genetics(
     model.lp_.col_cost_ = -mu
 
     # bounds on w using a helper function
-    model.lp_.col_lower_ = highs_bound_like(mu, lower_bound)
-    model.lp_.col_upper_ = highs_bound_like(mu, upper_bound)
+    model.lp_.col_lower_ = highs_bound_like(dimension, lower_bound)
+    model.lp_.col_upper_ = highs_bound_like(dimension, upper_bound)
 
     # define the quadratic term in the objective
     sigma = sparse.csc_matrix(sigma)  # BUG is sigma in CSR or CSC format?
@@ -564,9 +565,9 @@ def highs_standard_genetics(
     # if it were stored densely, but HiGHS requires CSR for input
     model.lp_.row_lower_ = model.lp_.row_upper_ = np.full(2, 0.5)
     model.lp_.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
-    model.lp_.a_matrix_.start_ = np.array([0, len(sires), dimension])
-    model.lp_.a_matrix_.index_ = np.array(list(sires) + list(dams))
-    model.lp_.a_matrix_.value_ = np.ones(dimension, dtype=int)
+    model.lp_.a_matrix_.start_ = [0, len(sires), dimension]
+    model.lp_.a_matrix_.index_ = list(sires) + list(dams)
+    model.lp_.a_matrix_.value_ = [1]*dimension
 
     # HiGHS spews all its output into the terminal by default, this restricts
     # that behaviour to only happen when the `debug` flag is used.
@@ -611,8 +612,8 @@ def highs_robust_genetics_sqp(
     lam: float,  # cannot be called `lambda`, that's reserved in Python
     kappa: float,
     dimension: int,
-    upper_bound: npt.NDArray[np.float64] | float = 1.0,
-    lower_bound: npt.NDArray[np.float64] | float = 0.0,
+    upper_bound: npt.NDArray[np.float64] | list[float] | float = 1.0,
+    lower_bound: npt.NDArray[np.float64] | list[float] | float = 0.0,
     time_limit: float | None = None,
     max_duality_gap: float | None = None,
     max_iterations: int = 1000,
@@ -663,11 +664,11 @@ def highs_robust_genetics_sqp(
         must be to variation in expected values.
     dimension : int
         Number of candidates in the cohort, i.e. the dimension of the problem.
-    upper_bound : ndarray or float, optional
+    upper_bound : ndarray, list, or float, optional
         Upper bound on how much each candidate can contribute. Can be an array
         of differing bounds for each candidate, or a float which applies to all
         candidates. Default value is `1.0`.
-    lower_bound : ndarray or float, optional
+    lower_bound : ndarray, list, or float, optional
         Lower bound on how much each candidate can contribute. Can be an array
         of differing bounds for each candidate, or a float which applies to all
         candidates. Default value is `0.0`.
@@ -711,8 +712,8 @@ def highs_robust_genetics_sqp(
     model.lp_.col_cost_ = -mubar
 
     # bounds on w using a helper function
-    model.lp_.col_lower_ = highs_bound_like(mubar, lower_bound)
-    model.lp_.col_upper_ = highs_bound_like(mubar, upper_bound)
+    model.lp_.col_lower_ = highs_bound_like(dimension, lower_bound)
+    model.lp_.col_upper_ = highs_bound_like(dimension, upper_bound)
 
     # define the quadratic term in the objective
     sigma = sparse.csc_matrix(sigma)  # BUG is sigma in CSR or CSC format?
@@ -725,9 +726,9 @@ def highs_robust_genetics_sqp(
     # add Mx = m to the model using CSR format
     model.lp_.row_lower_ = model.lp_.row_upper_ = np.full(2, 0.5)
     model.lp_.a_matrix_.format_ = highspy.MatrixFormat.kRowwise
-    model.lp_.a_matrix_.start_ = np.array([0, len(sires), dimension])
-    model.lp_.a_matrix_.index_ = np.array(list(sires) + list(dams))
-    model.lp_.a_matrix_.value_ = np.ones(dimension, dtype=int)
+    model.lp_.a_matrix_.start_ = [0, len(sires), dimension]
+    model.lp_.a_matrix_.index_ = list(sires) + list(dams)
+    model.lp_.a_matrix_.value_ = [1]*dimension
 
     h.passModel(model)  # TODO add checks on exit codes
 
@@ -752,8 +753,8 @@ def highs_robust_genetics_sqp(
         h.run()  # TODO add checks on exit codes
 
         # by default, col_value is a stock-Python list
-        solution: npt.NDArray[np.float64] = np.array(h.getSolution().col_value)
-        w_star: npt.NDArray[np.float64] = solution[:-1]
+        solution: list[float] = h.getSolution().col_value
+        w_star: npt.NDArray[np.float64] = np.array(solution[:-1])
         z_star: float = solution[-1]
 
         # we negated the objective function, so negate it back
@@ -763,7 +764,7 @@ def highs_robust_genetics_sqp(
             print(f"{i}: {w_star}, {objective_value:g}")
 
         # assess which constraints are currently active
-        # TODO see if HiGHS can explore active constraints mid-run
+        # TODO utilize HiGHS' getBasis.row_status to explore this
 
         # z coefficient for the new constraint
         alpha: float = sqrt(w_star.transpose()@omega@w_star)
@@ -774,7 +775,7 @@ def highs_robust_genetics_sqp(
 
         # add a new plane to the approximation of the uncertainty cone
         num_nz: int = dimension + 1  # HACK assuming entirely dense
-        index: npt.NDArray[np.int8] = np.array(range(dimension + 1))
+        index: range = range(dimension + 1)
         value: npt.NDArray[np.float64] = np.append(-omega@w_star, alpha)
         h.addRow(0, inf, num_nz, index, value)
 
