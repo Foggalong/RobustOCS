@@ -134,7 +134,6 @@ def gurobi_standard_genetics(
 
     # model file can be used externally for verification
     if model_output:
-        # NOTE old default was "grb-std-opt.mps"
         model.write(f"{model_output}.mps")
 
     model.optimize()
@@ -274,7 +273,6 @@ def gurobi_robust_genetics(
 
     # model file can be used externally for verification
     if model_output:
-        # NOTE old default was "grb-rob-opt.mps")
         model.write(f"{model_output}.mps")
 
     model.optimize()
@@ -422,6 +420,10 @@ def gurobi_robust_genetics_sqp(
     for i in range(max_iterations):
         # optimization of the model, print weights and objective
         model.optimize()
+
+        # return model and solution at every approximation to help debug
+        if model_output:
+            model.write(f"{model_output}.mps")
         if debug:
             print(f"{i}: {w.X}, {model.ObjVal:g}")
 
@@ -445,11 +447,6 @@ def gurobi_robust_genetics_sqp(
 
         # add a new plane to the approximation of the uncertainty cone
         model.addConstr(alpha*z >= w_star.transpose()@omega@w, name=f"P{i}")
-
-    # model file can be used externally for verification
-    if model_output:
-        # NOTE old default was "grb-rob-sqp.mps")
-        model.write(f"{model_output}.mps")
 
     return np.array(w.X), z.X, model.ObjVal  # HACK np.array avoids issue #9
 
@@ -587,17 +584,29 @@ def highs_standard_genetics(
     if max_duality_gap:
         pass  # NOTE HiGHS doesn't support duality gap, skip
 
-    h.passModel(model)
-    h.run()
-
-    # model file can be used externally for verification
+    # HiGHS' passModel returns a status indicating its success
+    pass_status: highspy._core.HighsStatus = h.passModel(model)
+    # model file must be saved between passModel and any error
     if model_output:
-        # NOTE old default was "hgs-std-opt.mps")
         h.writeModel(f"{model_output}.mps")
+    # HiGHS will try to continue if it gets an error, so stop it
+    if pass_status == highspy.HighsStatus.kError:
+        print(f"h.passModel failed with status {h.getModelStatus()}")
+        raise ValueError
 
-    # prints the solution with info about dual values
+    # HiGHS' run returns a status indicating its success
+    run_status: highspy._core.HighsStatus = h.run()
+    # solution (with dual info) must be printed between run and any error
     if debug:
         h.writeSolution("", 1)
+    mod_status: highspy._core.HighsModelStatus = h.getModelStatus()
+    # HiGHS will try to continue if it gets an error, so stop it
+    if run_status == highspy.HighsStatus.kError:
+        print(f"h.run failed with status {mod_status}")
+        raise ValueError
+    elif mod_status != highspy.HighsModelStatus.kOptimal:
+        print(f"h.run did not achieve optimality, status {mod_status}")
+        raise RuntimeError
 
     # by default, col_value is a stock-Python list
     solution: npt.NDArray[np.float64] = np.array(h.getSolution().col_value)
@@ -737,7 +746,15 @@ def highs_robust_genetics_sqp(
     model.lp_.a_matrix_.index_ = list(sires) + list(dams)
     model.lp_.a_matrix_.value_ = [1]*dimension
 
-    h.passModel(model)  # TODO add checks on exit codes
+    # HiGHS' passModel returns a status indicating its success
+    pass_status: highspy._core.HighsStatus = h.passModel(model)
+    # model file must be saved between passModel and any error
+    if model_output:
+        h.writeModel(f"{model_output}.mps")
+    # HiGHS will try to continue if it gets an error, so stop it
+    if pass_status == highspy.HighsStatus.kError:
+        print(f"h.passModel failed with status {h.getModelStatus()}")
+        raise ValueError
 
     # add z variable with bound 0 < z < inf and cost kappa
     h.addVar(0, highspy.kHighsInf)
@@ -756,8 +773,25 @@ def highs_robust_genetics_sqp(
         pass  # NOTE HiGHS doesn't support duality gap, skip
 
     for i in range(max_iterations):
-        # optimization of the model, print weights and objective
-        h.run()  # TODO add checks on exit codes
+        run_status: highspy._core.HighsStatus = h.run()
+
+        # return model and solution at every approximation to help debug
+        if model_output:
+            h.writeModel(f"{model_output}.mps")
+        if debug:
+            h.writeSolution("", 1)
+
+        # evaluate HiGHS' return value from h.run and attempt to solve
+        model_status: highspy._core.HighsModelStatus = h.getModelStatus()
+        # HiGHS will try to continue if it gets an error, so stop it
+        if run_status == highspy.HighsStatus.kError:
+            print(f"h.run at approximation #{i} failed with status "
+                  f"{model_status}")
+            raise ValueError
+        elif model_status != highspy.HighsModelStatus.kOptimal:
+            print(f"h.run did not achieve optimality at approximation "
+                  f"#{i}, status {model_status}")
+            raise RuntimeError
 
         # by default, col_value is a stock-Python list
         solution: list[float] = h.getSolution().col_value
@@ -785,15 +819,6 @@ def highs_robust_genetics_sqp(
         index: range = range(dimension + 1)
         value: npt.NDArray[np.float64] = np.append(-omega@w_star, alpha)
         h.addRow(0, inf, num_nz, index, value)
-
-    # model file can be used externally for verification
-    if model_output:
-        # NOTE old default was "hgs-rob-sqp.mps")
-        h.writeModel(f"{model_output}.mps")
-
-    # prints the solution with info about dual values
-    if debug:
-        h.writeSolution("", 1)
 
     # final value of solution is the z value, return separately
     return w_star, z_star, objective_value
