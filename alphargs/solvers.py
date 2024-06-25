@@ -33,7 +33,8 @@ def gurobi_standard_genetics(
     lower_bound: npt.NDArray[np.float64] | float = 0.0,
     time_limit: float | None = None,
     max_duality_gap: float | None = None,
-    debug: str | bool = False
+    model_output: str = '',
+    debug: bool = False
 ) -> tuple[npt.NDArray[np.float64], float]:
     """
     Solve the standard genetic selection problem using Gurobi.
@@ -81,11 +82,13 @@ def gurobi_standard_genetics(
     max_duality_gap : float or None, optional
         Maximum allowable duality gap to give Gurobi when solving the problem.
         Default value is `None`, i.e. do not allow any duality gap.
-    debug : str or bool, optional
-        Flag which controls both whether Gurobi prints its output to terminal
-        and whether it saves the model file to the working directory. If given
-        as a string, that string is used as the model output name, 'str.mps',
-        or if boolean `True` then `grb-std-opt.mps`. Default value is `False`.
+    model_output : str, optional
+        Flag which controls whether Gurobi saves the model file to the working
+        directory. If given, the string is used as the file name, 'str.mps',
+        Default value is the empty string, i.e. the file isn't saved.
+    debug : bool, optional
+        Flag which controls whether Gurobi prints its output to terminal.
+        Default value is `False`.
 
     Returns
     -------
@@ -130,11 +133,8 @@ def gurobi_standard_genetics(
         model.setParam('MIPGap', max_duality_gap)
 
     # model file can be used externally for verification
-    if debug:
-        if type(debug) is str:
-            model.write(f"{debug}.mps")
-        else:
-            model.write("grb-std-opt.mps")
+    if model_output:
+        model.write(f"{model_output}.mps")
 
     model.optimize()
     return np.array(w.X), model.ObjVal  # HACK np.array avoids issue #9
@@ -153,7 +153,8 @@ def gurobi_robust_genetics(
     lower_bound: npt.NDArray[np.float64] | float = 0.0,
     time_limit: float | None = None,
     max_duality_gap: float | None = None,
-    debug: str | bool = False
+    model_output: str = '',
+    debug: bool = False
 ) -> tuple[npt.NDArray[np.float64], float, float]:
     """
     Solve the robust genetic selection problem using Gurobi.
@@ -213,11 +214,13 @@ def gurobi_robust_genetics(
     max_duality_gap : float or None, optional
         Maximum allowable duality gap to give Gurobi when solving the problem.
         Default value is `None`, i.e. do not allow any duality gap.
-    debug : str or bool, optional
-        Flag which controls both whether Gurobi prints its output to terminal
-        and whether it saves the model file to the working directory. If given
-        as a string, that string is used as the model output name, 'str.mps',
-        or if boolean `True` then `grb-rob-opt.mps`. Default value is `False`.
+    model_output : str, optional
+        Flag which controls whether Gurobi saves the model file to the working
+        directory. If given, the string is used as the file name, 'str.mps',
+        Default value is the empty string, i.e. the file isn't saved.
+    debug : bool, optional
+        Flag which controls whether Gurobi prints its output to terminal.
+        Default value is `False`.
 
     Returns
     -------
@@ -269,11 +272,8 @@ def gurobi_robust_genetics(
         model.setParam('MIPGap', max_duality_gap)
 
     # model file can be used externally for verification
-    if debug:
-        if type(debug) is str:
-            model.write(f"{debug}.mps")
-        else:
-            model.write("grb-rob-opt.mps")
+    if model_output:
+        model.write(f"{model_output}.mps")
 
     model.optimize()
     return np.array(w.X), z.X, model.ObjVal  # HACK np.array avoids issue #9
@@ -294,7 +294,8 @@ def gurobi_robust_genetics_sqp(
     max_duality_gap: float | None = None,
     max_iterations: int = 1000,
     robust_gap_tol: float = 1e-7,
-    debug: str | bool = False
+    model_output: str = '',
+    debug: bool = False
 ) -> tuple[npt.NDArray[np.float64], float, float]:
     """
     Solve the robust genetic selection problem using SQP in Gurobi.
@@ -362,11 +363,13 @@ def gurobi_robust_genetics_sqp(
     robust_gap_tol : float, optional
         Tolerance when checking whether an approximating constraint is active
         and whether the SQP overall has converged. Default value is 10^-7.
-    debug : str or bool, optional
-        Flag which controls both whether Gurobi prints its output to terminal
-        and whether it saves the model file to the working directory. If given
-        as a string, that string is used as the model output name, 'str.mps',
-        or if boolean `True` then `grb-rob-sqp.mps`. Default value is `False`.
+    model_output : str, optional
+        Flag which controls whether Gurobi saves the model file to the working
+        directory. If given, the string is used as the file name, 'str.mps',
+        Default value is the empty string, i.e. the file isn't saved.
+    debug : bool, optional
+        Flag which controls whether Gurobi prints its output to terminal.
+        Default value is `False`.
 
     Returns
     -------
@@ -417,6 +420,10 @@ def gurobi_robust_genetics_sqp(
     for i in range(max_iterations):
         # optimization of the model, print weights and objective
         model.optimize()
+
+        # return model and solution at every approximation to help debug
+        if model_output:
+            model.write(f"{model_output}.mps")
         if debug:
             print(f"{i}: {w.X}, {model.ObjVal:g}")
 
@@ -440,13 +447,6 @@ def gurobi_robust_genetics_sqp(
 
         # add a new plane to the approximation of the uncertainty cone
         model.addConstr(alpha*z >= w_star.transpose()@omega@w, name=f"P{i}")
-
-    # model file can be used externally for verification
-    if debug:
-        if type(debug) is str:
-            model.write(f"{debug}.mps")
-        else:
-            model.write("grb-rob-sqp.mps")
 
     return np.array(w.X), z.X, model.ObjVal  # HACK np.array avoids issue #9
 
@@ -475,7 +475,8 @@ def highs_standard_genetics(
     lower_bound: npt.NDArray[np.float64] | list[float] | float = 0.0,
     time_limit: float | None = None,
     max_duality_gap: float | None = None,
-    debug: str | bool = False
+    model_output: str = '',
+    debug: bool = False
 ) -> tuple[npt.NDArray[np.float64], float]:
     """
     Solve the standard genetic selection problem using HiGHS.
@@ -523,11 +524,13 @@ def highs_standard_genetics(
     max_duality_gap : float or None, optional
         HiGHS does not support a tolerance on duality gap for this type of
         problem, so regardless whether specified the value will be ignored.
-    debug : str or bool, optional
-        Flag which controls both whether Gurobi prints its output to terminal
-        and whether it saves the model file to the working directory. If given
-        as a string, that string is used as the model output name, 'str.mps',
-        or if boolean `True` then `hgs-std-opt.mps`. Default value is `False`.
+    model_output : str, optional
+        Flag which controls whether Gurobi saves the model file to the working
+        directory. If given, the string is used as the file name, 'str.mps',
+        Default value is the empty string, i.e. the file isn't saved.
+    debug : bool, optional
+        Flag which controls whether Gurobi prints its output to terminal.
+        Default value is `False`.
 
     Returns
     -------
@@ -581,19 +584,29 @@ def highs_standard_genetics(
     if max_duality_gap:
         pass  # NOTE HiGHS doesn't support duality gap, skip
 
-    h.passModel(model)
-    h.run()
+    # HiGHS' passModel returns a status indicating its success
+    pass_status: highspy._core.HighsStatus = h.passModel(model)
+    # model file must be saved between passModel and any error
+    if model_output:
+        h.writeModel(f"{model_output}.mps")
+    # HiGHS will try to continue if it gets an error, so stop it
+    if pass_status == highspy.HighsStatus.kError:
+        print(f"h.passModel failed with status {h.getModelStatus()}")
+        raise ValueError
 
-    # model file can be used externally for verification
-    if debug:
-        if type(debug) is str:
-            h.writeModel(f"{debug}.mps")
-        else:
-            h.writeModel("hgs-std-opt.mps")
-
-    # prints the solution with info about dual values
+    # HiGHS' run returns a status indicating its success
+    run_status: highspy._core.HighsStatus = h.run()
+    # solution (with dual info) must be printed between run and any error
     if debug:
         h.writeSolution("", 1)
+    mod_status: highspy._core.HighsModelStatus = h.getModelStatus()
+    # HiGHS will try to continue if it gets an error, so stop it
+    if run_status == highspy.HighsStatus.kError:
+        print(f"h.run failed with status {mod_status}")
+        raise ValueError
+    elif mod_status != highspy.HighsModelStatus.kOptimal:
+        print(f"h.run did not achieve optimality, status {mod_status}")
+        raise RuntimeError
 
     # by default, col_value is a stock-Python list
     solution: npt.NDArray[np.float64] = np.array(h.getSolution().col_value)
@@ -618,7 +631,8 @@ def highs_robust_genetics_sqp(
     max_duality_gap: float | None = None,
     max_iterations: int = 1000,
     robust_gap_tol: float = 1e-7,
-    debug: str | bool = False
+    model_output: str = '',
+    debug: bool = False
 ) -> tuple[npt.NDArray[np.float64], float, float]:
     """
     Solve the robust genetic selection problem using SQP in HiGHS.
@@ -679,11 +693,13 @@ def highs_robust_genetics_sqp(
     robust_gap_tol : float, optional
         Tolerance when checking whether an approximating constraint is active
         and whether the SQP overall has converged. Default value is 10^-7.
-    debug : str or bool, optional
-        Flag which controls both whether Gurobi prints its output to terminal
-        and whether it saves the model file to the working directory. If given
-        as a string, that string is used as the model output name, 'str.mps',
-        or if boolean `True` then `grb-rob-sqp.mps`. Default value is `False`.
+    model_output : str, optional
+        Flag which controls whether Gurobi saves the model file to the working
+        directory. If given, the string is used as the file name, 'str.mps',
+        Default value is the empty string, i.e. the file isn't saved.
+    debug : bool, optional
+        Flag which controls whether Gurobi prints its output to terminal.
+        Default value is `False`.
 
     Returns
     -------
@@ -730,7 +746,15 @@ def highs_robust_genetics_sqp(
     model.lp_.a_matrix_.index_ = list(sires) + list(dams)
     model.lp_.a_matrix_.value_ = [1]*dimension
 
-    h.passModel(model)  # TODO add checks on exit codes
+    # HiGHS' passModel returns a status indicating its success
+    pass_status: highspy._core.HighsStatus = h.passModel(model)
+    # model file must be saved between passModel and any error
+    if model_output:
+        h.writeModel(f"{model_output}.mps")
+    # HiGHS will try to continue if it gets an error, so stop it
+    if pass_status == highspy.HighsStatus.kError:
+        print(f"h.passModel failed with status {h.getModelStatus()}")
+        raise ValueError
 
     # add z variable with bound 0 < z < inf and cost kappa
     h.addVar(0, highspy.kHighsInf)
@@ -749,8 +773,25 @@ def highs_robust_genetics_sqp(
         pass  # NOTE HiGHS doesn't support duality gap, skip
 
     for i in range(max_iterations):
-        # optimization of the model, print weights and objective
-        h.run()  # TODO add checks on exit codes
+        run_status: highspy._core.HighsStatus = h.run()
+
+        # return model and solution at every approximation to help debug
+        if model_output:
+            h.writeModel(f"{model_output}.mps")
+        if debug:
+            h.writeSolution("", 1)
+
+        # evaluate HiGHS' return value from h.run and attempt to solve
+        model_status: highspy._core.HighsModelStatus = h.getModelStatus()
+        # HiGHS will try to continue if it gets an error, so stop it
+        if run_status == highspy.HighsStatus.kError:
+            print(f"h.run at approximation #{i} failed with status "
+                  f"{model_status}")
+            raise ValueError
+        elif model_status != highspy.HighsModelStatus.kOptimal:
+            print(f"h.run did not achieve optimality at approximation "
+                  f"#{i}, status {model_status}")
+            raise RuntimeError
 
         # by default, col_value is a stock-Python list
         solution: list[float] = h.getSolution().col_value
@@ -778,17 +819,6 @@ def highs_robust_genetics_sqp(
         index: range = range(dimension + 1)
         value: npt.NDArray[np.float64] = np.append(-omega@w_star, alpha)
         h.addRow(0, inf, num_nz, index, value)
-
-    # model file can be used externally for verification
-    if debug:
-        if type(debug) is str:
-            h.writeModel(f"{debug}.mps")
-        else:
-            h.writeModel("hgs-rob-sqp.mps")
-
-    # prints the solution with info about dual values
-    if debug:
-        h.writeSolution("", 1)
 
     # final value of solution is the z value, return separately
     return w_star, z_star, objective_value
