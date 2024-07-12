@@ -6,9 +6,9 @@ REPS=5   # take the best average time from this many averages
 # code block which sets up the problem, same across all three
 SETUP='
 import sys; sys.path.insert(1, "../../")
-import alphargs as A
+import robustocs as rocs
 
-sigma, mubar, omega, n = A.load_problem(
+sigma, mubar, omega, n = rocs.load_problem(
     "A1000.txt",
     "EBV1000.txt",
     "S1000.txt",
@@ -23,11 +23,11 @@ kap = 1'
 
 # array of solver commands to time
 SOLVERS=(
-    'A.gurobi_standard_genetics(sigma, mubar, sires, dams, lam, n)'
-    'A.highs_standard_genetics(sigma, mubar, sires, dams, lam, n)'
-    'A.gurobi_robust_genetics(sigma, mubar, omega, sires, dams, lam, kap, n)'
-    'A.gurobi_robust_genetics_sqp(sigma, mubar, omega, sires, dams, lam, kap, n)'
-    'A.highs_robust_genetics_sqp(sigma, mubar, omega, sires, dams, lam, kap, n)'
+    'rocs.gurobi_standard_genetics(sigma, mubar, sires, dams, lam, n)'
+    'rocs.highs_standard_genetics(sigma, mubar, sires, dams, lam, n)'
+    'rocs.gurobi_robust_genetics(sigma, mubar, omega, sires, dams, lam, kap, n)'
+    'rocs.gurobi_robust_genetics_sqp(sigma, mubar, omega, sires, dams, lam, kap, n)'
+    'rocs.highs_robust_genetics_sqp(sigma, mubar, omega, sires, dams, lam, kap, n)'
 )
 
 # run timing code for each solver command

@@ -9,7 +9,7 @@ import numpy as np          # defines matrix structures
 import numpy.typing as npt  # variable typing definitions for NumPy
 from scipy import sparse    # used for sparse matrix format
 
-# controls what's imported on `from alphargs.loaders import *`
+# controls what's imported on `from robustocs.loaders import *`
 __all__ = ["load_ped", "makeA", "load_problem"]
 
 

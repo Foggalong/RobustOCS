@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 import sys; sys.path.insert(1, '../../')  # HACK pre-module workaround
-import alphargs
+import robustocs
 import time
 
 # key problem variables loaded from standard format txt files
-sigma, mubar, omega, n = alphargs.load_problem(
+sigma, mubar, omega, n = robustocs.load_problem(
     "A50.txt",
     "EBV50.txt",
     "S50.txt",
@@ -24,28 +24,28 @@ kap = 1
 
 # Gurobi using direct optimization
 t0 = time.time()
-w_grb, z_grb, obj_grb = alphargs.gurobi_robust_genetics(
+w_grb, z_grb, obj_grb = robustocs.gurobi_robust_genetics(
     sigma, mubar, omega, sires, dams, lam, kap, n)
 t1 = time.time()
 print(f"Gurobi took {t1-t0:.5f} seconds (direct)")
 
 # Gurobi using sequential quadratic programming
 t0 = time.time()
-w_grb, z_grb, obj_grb = alphargs.gurobi_robust_genetics_sqp(
+w_grb, z_grb, obj_grb = robustocs.gurobi_robust_genetics_sqp(
     sigma, mubar, omega, sires, dams, lam, kap, n)
 t1 = time.time()
 print(f"Gurobi took {t1-t0:.5f} seconds (SQP)")
 
 # HiGHS using sequential quadratic programming
 t0 = time.time()
-w_hig, z_hig, obj_hig = alphargs.highs_robust_genetics_sqp(
+w_hig, z_hig, obj_hig = robustocs.highs_robust_genetics_sqp(
     sigma, mubar, omega, sires, dams, lam, kap, n)
 t1 = time.time()
 print(f"HiGHS took  {t1-t0:.5f} seconds (SQP)")
 
 
 print("\nSQP Methods:")
-alphargs.print_compare_solutions(
+robustocs.print_compare_solutions(
     w_grb, w_hig, obj_grb, obj_hig, z1=z_grb, z2=z_hig,
     name1="Gurobi", name2="HiGHS ", tol=1e-7
 )

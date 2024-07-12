@@ -22,6 +22,7 @@
         "printoptions",
         "proxqp",
         "qpsolvers",
+        "robustocs",
         "sqrtm",
         "vtype",
         "WNRM"

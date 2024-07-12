@@ -12,7 +12,7 @@ import highspy              # HiGHS optimization interface
 from math import sqrt       # used within the robust constraint
 from scipy import sparse    # used for sparse matrix format
 
-# controls what's imported on `from alphargs.solvers import *`
+# controls what's imported on `from robustocs.solvers import *`
 __all__ = [
     "gurobi_standard_genetics",
     "gurobi_robust_genetics",

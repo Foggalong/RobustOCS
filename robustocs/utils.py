@@ -10,7 +10,7 @@ import numpy as np          # defines matrix structures
 import numpy.typing as npt  # variable typing definitions for NumPy
 from scipy import sparse    # used for sparse matrix format
 
-# controls what's imported on `from alphargs.utils import *`
+# controls what's imported on `from robustocs.utils import *`
 __all__ = ["print_compare_solutions", "check_uncertainty_constraint"]
 
 
