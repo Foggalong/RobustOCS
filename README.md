@@ -1,6 +1,6 @@
 # RobustOCS
 
-Tools for solving robust optimal contribution selection problems in Python.
+Tools for solving robust optimal contribution selection problems in Python. All code and examples in RobustOCS are fully and freely available for all use under the MIT License.
 
 ## Dependencies
 
