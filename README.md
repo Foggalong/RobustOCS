@@ -17,6 +17,6 @@ It depends on Python 3.10+, using [NumPy](https://pypi.org/project/numpy) for li
 
 The [GitHub wiki] includes documentation written by which explains the usage and parameters in more detail, alongside some worked examples (the code for which is in [`examples/`](examples/)). This includes a realistic simulated example from [Gregor Gorjanc] and [Ivan Pocrnić].
 
-[GitHub wiki]: https://github.com/Foggalong/robust-ocs/wiki
+[GitHub wiki]: https://github.com/Foggalong/RobustOCS/wiki
 [Gregor Gorjanc]: https://www.ed.ac.uk/profile/gregor-gorjanc
 [Ivan Pocrnić]: https://www.ed.ac.uk/profile/ivan-pocrnic
