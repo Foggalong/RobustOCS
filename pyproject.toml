@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "robustocs"
+version = "0.0.1"
+dependencies = [
+    "numpy >= 1.21, < 2.0.0",
+    "scipy >= 1.8.0",
+    "gurobipy >= 11.0.0",
+    "highspy >= 1.7.2",
+]
+requires-python = ">=3.10"
+authors = [
+    { name="Josh Fogg", email="j.fogg@ed.ac.uk" },
+]
+description = "Tools for solving robust optimal contribution selection problems"
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+]
+
+[project.urls]
+Homepage = "https://github.com/Foggalong/RobustOCS"
+Documentation = "https://github.com/Foggalong/RobustOCS/wiki"
+Issues = "https://github.com/Foggalong/RobustOCS/issues"
