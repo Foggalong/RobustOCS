@@ -1,0 +1,39 @@
+name: Check Build
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install -e .
+
+    - name: Testing n = 4 example
+      run: |
+        cd examples/04/
+        python3 test.py
+        cd ../../
+
+
+    - name: Testing n = 50 example
+      run: |
+        cd examples/50/
+        python3 test.py
+        cd ../../
+
+    - name: Testing n = 1,000 example
+      run: |
+        cd examples/1000/
+        python3 test.py
+        cd ../../    
