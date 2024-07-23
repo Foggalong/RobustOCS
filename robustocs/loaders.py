@@ -48,7 +48,7 @@ def count_sparse_nnz(filename: str) -> int:
 
 
 def load_symmetric_matrix(filename: str, dimension: int
-                          ) -> npt.NDArray[np.float64]:
+                          ) -> npt.NDArray[np.floating]:
     """
     Since NumPy doesn't have a stock way to load symmetric matrices stored in
     symmetric coordinate format, this adds one.
@@ -66,7 +66,7 @@ def load_symmetric_matrix(filename: str, dimension: int
         The matrix represented by the file.
     """
 
-    matrix = np.zeros([dimension, dimension], dtype=float)
+    matrix = np.zeros([dimension, dimension], dtype=np.floating)
 
     with open(filename, 'r') as file:
         for line in file:
@@ -79,7 +79,7 @@ def load_symmetric_matrix(filename: str, dimension: int
 
 
 def load_symmetric_matrix_coo(filename: str, dimension: int, nnz: int
-                              ) -> sparse.spmatrix:
+                              ) -> sparse.sparray:
     """
     Since neither NumPy or SciPy have a stock way to load symmetric matrices
     into sparse coordinate format, this adds one.
@@ -101,9 +101,9 @@ def load_symmetric_matrix_coo(filename: str, dimension: int, nnz: int
     """
 
     # preallocate storage arrays
-    rows: npt.NDArray[np.int8] = np.zeros(nnz)
-    cols: npt.NDArray[np.int8] = np.zeros(nnz)
-    vals: npt.NDArray[np.float64] = np.zeros(nnz)
+    rows: npt.NDArray[np.integer] = np.zeros(nnz, dtype=np.integer)
+    cols: npt.NDArray[np.integer] = np.zeros(nnz, dtype=np.integer)
+    vals: npt.NDArray[np.floating] = np.zeros(nnz, dtype=np.floating)
 
     with open(filename, 'r') as file:
         index: int = 0
@@ -126,15 +126,15 @@ def load_symmetric_matrix_coo(filename: str, dimension: int, nnz: int
 
             index += 1
 
-    return sparse.coo_matrix(
+    return sparse.coo_array(
         (vals, (rows, cols)),
         shape=(dimension, dimension),
-        dtype=np.float64
+        dtype=np.floating
     )
 
 
 def load_symmetric_matrix_csr(filename: str, dimension: int, nnz: int
-                              ) -> sparse.spmatrix:
+                              ) -> sparse.sparray:
     """
     Loads a symmetric matrix into compressed sparse row format. It does this
     by first loading into sparse coordinate format and then converting with
@@ -157,7 +157,7 @@ def load_symmetric_matrix_csr(filename: str, dimension: int, nnz: int
     """
 
     matrix = load_symmetric_matrix_coo(filename, dimension, nnz)
-    return sparse.csr_matrix(matrix)
+    return sparse.csr_array(matrix)
 
 
 def load_ped(filename: str) -> dict[int, list[int]]:
@@ -191,7 +191,7 @@ def load_ped(filename: str) -> dict[int, list[int]]:
 # MATRIX GENERATORS
 # Utility functions for generating matrices from pedigree data.
 
-def makeA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.float64]:
+def makeA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
     """
     Constructs Wright's Numerator Relationship Matrix (WNRM) from a given
     pedigree structure.
@@ -210,7 +210,7 @@ def makeA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.float64]:
 
     m = len(pedigree)
     # preallocate memory for A
-    A = np.zeros((m, m), dtype=float)
+    A = np.zeros((m, m), dtype=np.floating)
 
     # iterate over rows
     for i in range(0, m):
@@ -238,9 +238,9 @@ def load_problem(A_filename: str, E_filename: str, S_filename: str,
                  nnzA: int | None = None, nnzS: int | None = None,
                  dimension: int | None = None, pedigree: bool = False,
                  issparse: bool = False
-                 ) -> tuple[npt.NDArray[np.float64] | sparse.spmatrix,
-                            npt.NDArray[np.float64],
-                            npt.NDArray[np.float64] | sparse.spmatrix,
+                 ) -> tuple[npt.NDArray[np.floating] | sparse.sparray,
+                            npt.NDArray[np.floating],
+                            npt.NDArray[np.floating] | sparse.sparray,
                             int]:
     """
     Load a robust genetic selection problem into Python.
@@ -274,12 +274,12 @@ def load_problem(A_filename: str, E_filename: str, S_filename: str,
 
     Returns
     -------
-    ndarray or spmatrix
+    ndarray or sparray
         Covariance matrix of candidates in the cohort.
     ndarray
         Vector of expected values of the expected breeding values of
         candidates in the cohort.
-    ndarray or spmatrix
+    ndarray or sparray
         Covariance matrix of expected breeding values of candidates in the
         cohort.
     int
@@ -307,7 +307,7 @@ def load_problem(A_filename: str, E_filename: str, S_filename: str,
         A = makeA(load_ped(A_filename))
         # HACK this loads the full matrix, then converts it down to sparse
         if issparse:
-            A = sparse.coo_matrix(A)
+            A = sparse.coo_array(A)
     else:
         if issparse:
             if not nnzA:

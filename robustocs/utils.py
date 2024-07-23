@@ -15,8 +15,8 @@ __all__ = ["print_compare_solutions", "check_uncertainty_constraint"]
 
 
 def print_compare_solutions(
-    portfolio1: npt.NDArray[np.float64],
-    portfolio2: npt.NDArray[np.float64],
+    portfolio1: npt.NDArray[np.floating],
+    portfolio2: npt.NDArray[np.floating],
     objective1: float,
     objective2: float,
     precision: int = 5,
@@ -106,8 +106,8 @@ def print_compare_solutions(
 
 def check_uncertainty_constraint(
     z: float,
-    w: npt.NDArray[np.float64],
-    omega: npt.NDArray[np.float64] | sparse.spmatrix,
+    w: npt.NDArray[np.floating],
+    omega: npt.NDArray[np.floating] | sparse.sparray,
     tol: float = 1e-7,
     debug: bool = False
 ) -> bool:
@@ -123,7 +123,7 @@ def check_uncertainty_constraint(
     Parameters
     ----------
     z : float
-        Auxillary variable from a solution to the robust selection problem.
+        Auxiliary variable from a solution to the robust selection problem.
     w : ndarray
         Portfolio vector from a solution to the robust selection problem.
     omega : ndarray
