@@ -19,8 +19,6 @@ pip install RobustOCS/
 
 Either way, the package depends on Python 3.10+, using [NumPy](https://pypi.org/project/numpy) for linear algebra and [SciPy](https://scipy.org) for sparse matrix objects. As a solver it can either use [Gurobi](https://www.gurobi.com) (commercial) via [gurobipy](https://pypi.org/project/gurobipy) or [HiGHS](https://highs.dev) (free software) via [highspy](https://pypi.org/project/highspy).
 
-[NumPy v2 support]: https://support.gurobi.com/hc/en-us/articles/25787048531601-Compatibility-issues-with-numpy-2-0
-
 ## Examples
 
 The [GitHub wiki] includes documentation written by which explains the usage and parameters in more detail, alongside some worked examples (the data for which is in [`examples/`](examples/)). This includes a realistic simulated example from [Gregor Gorjanc] and [Ivan Pocrnić].
