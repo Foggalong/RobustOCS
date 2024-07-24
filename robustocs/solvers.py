@@ -23,19 +23,19 @@ __all__ = [
 
 
 def gurobi_standard_genetics(
-    sigma: npt.NDArray[np.float64] | sparse.spmatrix,
-    mu: npt.NDArray[np.float64],
+    sigma: npt.NDArray[np.floating] | sparse.spmatrix,
+    mu: npt.NDArray[np.floating],
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
     lam: float,  # cannot be called `lambda`, that's reserved in Python
     dimension: int,
-    upper_bound: npt.NDArray[np.float64] | float = 1.0,
-    lower_bound: npt.NDArray[np.float64] | float = 0.0,
+    upper_bound: npt.NDArray[np.floating] | float = 1.0,
+    lower_bound: npt.NDArray[np.floating] | float = 0.0,
     time_limit: float | None = None,
     max_duality_gap: float | None = None,
     model_output: str = '',
     debug: bool = False
-) -> tuple[npt.NDArray[np.float64], float]:
+) -> tuple[npt.NDArray[np.floating], float]:
     """
     Solve the standard genetic selection problem using Gurobi.
 
@@ -118,7 +118,7 @@ def gurobi_standard_genetics(
     )
 
     # set up the two sum-to-half constraints
-    M = np.zeros((2, dimension), dtype=int)
+    M = np.zeros((2, dimension), dtype=np.bool)
     # define the M so that column i is [1;0] if i is a sire and [0;1] otherwise
     M[0, sires] = 1
     M[1, dams] = 1
@@ -141,21 +141,21 @@ def gurobi_standard_genetics(
 
 
 def gurobi_robust_genetics(
-    sigma: npt.NDArray[np.float64] | sparse.spmatrix,
-    mubar: npt.NDArray[np.float64],
-    omega: npt.NDArray[np.float64] | sparse.spmatrix,
+    sigma: npt.NDArray[np.floating] | sparse.spmatrix,
+    mubar: npt.NDArray[np.floating],
+    omega: npt.NDArray[np.floating] | sparse.spmatrix,
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
     lam: float,  # cannot be called `lambda`, that's reserved in Python
     kappa: float,
     dimension: int,
-    upper_bound: npt.NDArray[np.float64] | float = 1.0,
-    lower_bound: npt.NDArray[np.float64] | float = 0.0,
+    upper_bound: npt.NDArray[np.floating] | float = 1.0,
+    lower_bound: npt.NDArray[np.floating] | float = 0.0,
     time_limit: float | None = None,
     max_duality_gap: float | None = None,
     model_output: str = '',
     debug: bool = False
-) -> tuple[npt.NDArray[np.float64], float, float]:
+) -> tuple[npt.NDArray[np.floating], float, float]:
     """
     Solve the robust genetic selection problem using Gurobi.
 
@@ -227,7 +227,7 @@ def gurobi_robust_genetics(
     ndarray
         Portfolio vector which Gurobi has determined is a solution.
     float
-        Auxillary variable corresponding to uncertainty associated with the
+        Auxiliary variable corresponding to uncertainty associated with the
         portfolio vector which Gurobi has determined is a solution.
     float
         Value of the objective function for returned solution vector.
@@ -254,12 +254,12 @@ def gurobi_robust_genetics(
     )
 
     # set up the two sum-to-half constraints
-    M = np.zeros((2, dimension), dtype=int)
+    M = np.zeros((2, dimension), dtype=np.bool)
     # define the M so that column i is [1;0] if i is a sire and [0;1] otherwise
     M[0, sires] = 1
     M[1, dams] = 1
     # define the right hand side of the constraint Mx = m
-    m = np.full(2, 0.5, dtype=float)
+    m = np.full(2, 0.5, dtype=np.floating)
     model.addConstr(M@w == m, name="sum-to-half")
 
     # conic constraint which comes from robust optimization
@@ -280,23 +280,23 @@ def gurobi_robust_genetics(
 
 
 def gurobi_robust_genetics_sqp(
-    sigma: npt.NDArray[np.float64] | sparse.spmatrix,
-    mubar: npt.NDArray[np.float64],
-    omega: npt.NDArray[np.float64] | sparse.spmatrix,
+    sigma: npt.NDArray[np.floating] | sparse.spmatrix,
+    mubar: npt.NDArray[np.floating],
+    omega: npt.NDArray[np.floating] | sparse.spmatrix,
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
     lam: float,  # cannot be called `lambda`, that's reserved in Python
     kappa: float,
     dimension: int,
-    upper_bound: npt.NDArray[np.float64] | float = 1.0,
-    lower_bound: npt.NDArray[np.float64] | float = 0.0,
+    upper_bound: npt.NDArray[np.floating] | float = 1.0,
+    lower_bound: npt.NDArray[np.floating] | float = 0.0,
     time_limit: float | None = None,
     max_duality_gap: float | None = None,
     max_iterations: int = 1000,
     robust_gap_tol: float = 1e-7,
     model_output: str = '',
     debug: bool = False
-) -> tuple[npt.NDArray[np.float64], float, float]:
+) -> tuple[npt.NDArray[np.floating], float, float]:
     """
     Solve the robust genetic selection problem using SQP in Gurobi.
 
@@ -403,12 +403,12 @@ def gurobi_robust_genetics_sqp(
     )
 
     # set up the two sum-to-half constraints
-    M = np.zeros((2, dimension), dtype=int)
+    M = np.zeros((2, dimension), dtype=np.bool)
     # define the M so that column i is [1;0] if i is a sire and [0;1] otherwise
     M[0, sires] = 1
     M[1, dams] = 1
     # define the right hand side of the constraint Mx = m
-    m = np.full(2, 0.5, dtype=float)
+    m = np.full(2, 0.5, dtype=np.floating)
     model.addConstr(M@w == m, name="sum-to-half")
 
     # optional controls to stop Gurobi taking too long
@@ -438,7 +438,7 @@ def gurobi_robust_genetics_sqp(
             print("No active constraints!")
 
         # z coefficient for the new constraint
-        w_star: npt.NDArray[np.float64] = np.array(w.X)
+        w_star: npt.NDArray[np.floating] = np.array(w.X)
         alpha: float = sqrt(w_star.transpose()@omega@w_star)
 
         # if gap between z and w'Omega w has converged, done
@@ -452,8 +452,8 @@ def gurobi_robust_genetics_sqp(
 
 
 def highs_bound_like(dimension: int,
-                     value: float | list[float] | npt.NDArray[np.float64]
-                     ):  # -> npt.NDArray[np.float64] | list[float] # BUG broke
+                     value: float | list[float] | npt.NDArray[np.floating]
+                     ):  # -> npt.NDArray[np.floating] | list[float] # BUG broke
     """
     Helper function which allows HiGHS to interpret variable bounds specified
     either as a vector or a single floating point value. If `value` is an array
@@ -466,18 +466,18 @@ def highs_bound_like(dimension: int,
 
 def highs_standard_genetics(
     sigma: sparse.spmatrix,
-    mu: npt.NDArray[np.float64],
+    mu: npt.NDArray[np.floating],
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
     lam: float,  # cannot be called `lambda`, that's reserved in Python
     dimension: int,
-    upper_bound: npt.NDArray[np.float64] | list[float] | float = 1.0,
-    lower_bound: npt.NDArray[np.float64] | list[float] | float = 0.0,
+    upper_bound: npt.NDArray[np.floating] | list[float] | float = 1.0,
+    lower_bound: npt.NDArray[np.floating] | list[float] | float = 0.0,
     time_limit: float | None = None,
     max_duality_gap: float | None = None,
     model_output: str = '',
     debug: bool = False
-) -> tuple[npt.NDArray[np.float64], float]:
+) -> tuple[npt.NDArray[np.floating], float]:
     """
     Solve the standard genetic selection problem using HiGHS.
 
@@ -557,7 +557,6 @@ def highs_standard_genetics(
     model.lp_.col_upper_ = highs_bound_like(dimension, upper_bound)
 
     # define the quadratic term in the objective
-    sigma = sparse.csc_matrix(sigma)  # BUG is sigma in CSR or CSC format?
     model.hessian_.dim_ = dimension
     model.hessian_.start_ = sigma.indptr
     model.hessian_.index_ = sigma.indices
@@ -609,7 +608,7 @@ def highs_standard_genetics(
         raise RuntimeError
 
     # by default, col_value is a stock-Python list
-    solution: npt.NDArray[np.float64] = np.array(h.getSolution().col_value)
+    solution: npt.NDArray[np.floating] = np.array(h.getSolution().col_value)
     # we negated the objective function, so negate it back
     objective_value: float = -h.getInfo().objective_function_value
 
@@ -618,22 +617,22 @@ def highs_standard_genetics(
 
 def highs_robust_genetics_sqp(
     sigma: sparse.spmatrix,
-    mubar: npt.NDArray[np.float64],
-    omega: npt.NDArray[np.float64] | sparse.spmatrix,
+    mubar: npt.NDArray[np.floating],
+    omega: npt.NDArray[np.floating] | sparse.spmatrix,
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
     lam: float,  # cannot be called `lambda`, that's reserved in Python
     kappa: float,
     dimension: int,
-    upper_bound: npt.NDArray[np.float64] | list[float] | float = 1.0,
-    lower_bound: npt.NDArray[np.float64] | list[float] | float = 0.0,
+    upper_bound: npt.NDArray[np.floating] | list[float] | float = 1.0,
+    lower_bound: npt.NDArray[np.floating] | list[float] | float = 0.0,
     time_limit: float | None = None,
     max_duality_gap: float | None = None,
     max_iterations: int = 1000,
     robust_gap_tol: float = 1e-7,
     model_output: str = '',
     debug: bool = False
-) -> tuple[npt.NDArray[np.float64], float, float]:
+) -> tuple[npt.NDArray[np.floating], float, float]:
     """
     Solve the robust genetic selection problem using SQP in HiGHS.
 
@@ -795,7 +794,7 @@ def highs_robust_genetics_sqp(
 
         # by default, col_value is a stock-Python list
         solution: list[float] = h.getSolution().col_value
-        w_star: npt.NDArray[np.float64] = np.array(solution[:-1])
+        w_star: npt.NDArray[np.floating] = np.array(solution[:-1])
         z_star: float = solution[-1]
 
         # we negated the objective function, so negate it back
@@ -825,7 +824,7 @@ def highs_robust_genetics_sqp(
         # add a new plane to the approximation of the uncertainty cone
         num_nz: int = dimension + 1  # HACK assuming entirely dense
         index: range = range(dimension + 1)
-        value: npt.NDArray[np.float64] = np.append(-omega@w_star, alpha)
+        value: npt.NDArray[np.floating] = np.append(-omega@w_star, alpha)
         h.addRow(0, inf, num_nz, index, value)
 
     # final value of solution is the z value, return separately

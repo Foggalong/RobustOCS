@@ -21,8 +21,8 @@ __all__ = ["load_ped", "makeA", "load_problem"]
 
 def count_sparse_nnz(filename: str) -> int:
     """
-    Return the number of non-zero entries for a matrix stored in symmetric
-    sparse coordinate format.
+    Return the number of non-zero entries for a matrix stored in a file
+    in symmetric sparse coordinate (COO) format.
 
     Parameters
     ----------
@@ -48,7 +48,7 @@ def count_sparse_nnz(filename: str) -> int:
 
 
 def load_symmetric_matrix(filename: str, dimension: int
-                          ) -> npt.NDArray[np.float64]:
+                          ) -> npt.NDArray[np.floating]:
     """
     Since NumPy doesn't have a stock way to load symmetric matrices stored in
     symmetric coordinate format, this adds one.
@@ -66,7 +66,7 @@ def load_symmetric_matrix(filename: str, dimension: int
         The matrix represented by the file.
     """
 
-    matrix = np.zeros([dimension, dimension], dtype=float)
+    matrix = np.zeros([dimension, dimension], dtype=np.floating)
 
     with open(filename, 'r') as file:
         for line in file:
@@ -78,11 +78,11 @@ def load_symmetric_matrix(filename: str, dimension: int
     return matrix
 
 
-def load_symmetric_matrix_coo(filename: str, dimension: int, nnz: int
-                              ) -> sparse.spmatrix:
+def load_sparse_symmetric_matrix(filename: str, dimension: int, nnz: int,
+                                 format: str = 'csr') -> sparse.spmatrix:
     """
     Since neither NumPy or SciPy have a stock way to load symmetric matrices
-    into sparse coordinate format, this adds one.
+    stored in symmetric coordinate format into SciPy's formats, this adds one.
 
     Parameters
     ----------
@@ -93,17 +93,21 @@ def load_symmetric_matrix_coo(filename: str, dimension: int, nnz: int
     nnz : int
         Number of non-zero entries in the matrix stored in the file. Note that
         due to symmetry, this may be larger than the number of lines in file.
+    format : str
+        Format to use for the sparse matrix. Options available are 'coo' (for
+        sparse coordinate format) or 'csr' (compressed sparse row format).
+        Default value is `csr`.
 
     Returns
     -------
-    ndarray
+    spmatrix
         The matrix represented by the file.
     """
 
     # preallocate storage arrays
-    rows: npt.NDArray[np.int8] = np.zeros(nnz)
-    cols: npt.NDArray[np.int8] = np.zeros(nnz)
-    vals: npt.NDArray[np.float64] = np.zeros(nnz)
+    rows: npt.NDArray[np.integer] = np.zeros(nnz, dtype=np.integer)
+    cols: npt.NDArray[np.integer] = np.zeros(nnz, dtype=np.integer)
+    vals: npt.NDArray[np.floating] = np.zeros(nnz, dtype=np.floating)
 
     with open(filename, 'r') as file:
         index: int = 0
@@ -126,38 +130,20 @@ def load_symmetric_matrix_coo(filename: str, dimension: int, nnz: int
 
             index += 1
 
-    return sparse.coo_matrix(
-        (vals, (rows, cols)),
-        shape=(dimension, dimension),
-        dtype=np.float64
-    )
-
-
-def load_symmetric_matrix_csr(filename: str, dimension: int, nnz: int
-                              ) -> sparse.spmatrix:
-    """
-    Loads a symmetric matrix into compressed sparse row format. It does this
-    by first loading into sparse coordinate format and then converting with
-    Scipy. TODO: add a more efficient way which loads into CSR directly.
-
-    Parameters
-    ----------
-    filename : str
-        Filename, including extension. Space-separated data file.
-    dimension : int
-        Number of rows (and columns) of the matrix stored in the file.
-    nnz : int
-        Number of non-zero entries in the matrix stored in the file. Note that
-        due to symmetry, this may be larger than the number of lines in file.
-
-    Returns
-    -------
-    ndarray
-        The matrix represented by the file.
-    """
-
-    matrix = load_symmetric_matrix_coo(filename, dimension, nnz)
-    return sparse.csr_matrix(matrix)
+    if format == 'coo':
+        return sparse.coo_matrix(
+            (vals, (rows, cols)),
+            shape=(dimension, dimension),
+            dtype=np.floating
+        )
+    elif format == 'csr':
+        return sparse.csr_matrix(
+            (vals, (rows, cols)),
+            shape=(dimension, dimension),
+            dtype=np.floating
+        )
+    else:
+        raise ValueError("Format must be 'coo' or 'csr'.")
 
 
 def load_ped(filename: str) -> dict[int, list[int]]:
@@ -191,7 +177,7 @@ def load_ped(filename: str) -> dict[int, list[int]]:
 # MATRIX GENERATORS
 # Utility functions for generating matrices from pedigree data.
 
-def makeA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.float64]:
+def makeA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
     """
     Constructs Wright's Numerator Relationship Matrix (WNRM) from a given
     pedigree structure.
@@ -210,7 +196,7 @@ def makeA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.float64]:
 
     m = len(pedigree)
     # preallocate memory for A
-    A = np.zeros((m, m), dtype=float)
+    A = np.zeros((m, m), dtype=np.floating)
 
     # iterate over rows
     for i in range(0, m):
@@ -238,9 +224,9 @@ def load_problem(A_filename: str, E_filename: str, S_filename: str,
                  nnzA: int | None = None, nnzS: int | None = None,
                  dimension: int | None = None, pedigree: bool = False,
                  issparse: bool = False
-                 ) -> tuple[npt.NDArray[np.float64] | sparse.spmatrix,
-                            npt.NDArray[np.float64],
-                            npt.NDArray[np.float64] | sparse.spmatrix,
+                 ) -> tuple[npt.NDArray[np.floating] | sparse.spmatrix,
+                            npt.NDArray[np.floating],
+                            npt.NDArray[np.floating] | sparse.spmatrix,
                             int]:
     """
     Load a robust genetic selection problem into Python.
@@ -286,7 +272,7 @@ def load_problem(A_filename: str, E_filename: str, S_filename: str,
         Dimension of the problem.
     """
 
-    E = np.loadtxt(E_filename, dtype=float)
+    E = np.loadtxt(E_filename, dtype=np.floating)
     # if dimension not specified, use `E` which doesn't need preallocation
     if not dimension:
         assert isinstance(E.size, int)  # catches E being empty
@@ -296,7 +282,7 @@ def load_problem(A_filename: str, E_filename: str, S_filename: str,
     if issparse:
         if not nnzS:
             nnzS = count_sparse_nnz(S_filename)
-        S = load_symmetric_matrix_csr(S_filename, dimension, nnzS)
+        S = load_sparse_symmetric_matrix(S_filename, dimension, nnzS)
     else:
         # if nnzS was defined here, it's ignored as a parameter
         S = load_symmetric_matrix(S_filename, dimension)
@@ -312,7 +298,7 @@ def load_problem(A_filename: str, E_filename: str, S_filename: str,
         if issparse:
             if not nnzA:
                 nnzA = count_sparse_nnz(A_filename)
-            A = load_symmetric_matrix_csr(A_filename, dimension, nnzA)
+            A = load_sparse_symmetric_matrix(A_filename, dimension, nnzA)
         else:
             # if nnzA was defined here, it's ignored as a parameter
             A = load_symmetric_matrix(A_filename, dimension)
