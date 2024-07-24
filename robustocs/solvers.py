@@ -23,7 +23,7 @@ __all__ = [
 
 
 def gurobi_standard_genetics(
-    sigma: npt.NDArray[np.floating] | sparse.sparray,
+    sigma: npt.NDArray[np.floating] | sparse.spmatrix,
     mu: npt.NDArray[np.floating],
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
@@ -141,9 +141,9 @@ def gurobi_standard_genetics(
 
 
 def gurobi_robust_genetics(
-    sigma: npt.NDArray[np.floating] | sparse.sparray,
+    sigma: npt.NDArray[np.floating] | sparse.spmatrix,
     mubar: npt.NDArray[np.floating],
-    omega: npt.NDArray[np.floating] | sparse.sparray,
+    omega: npt.NDArray[np.floating] | sparse.spmatrix,
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
     lam: float,  # cannot be called `lambda`, that's reserved in Python
@@ -259,7 +259,7 @@ def gurobi_robust_genetics(
     M[0, sires] = 1
     M[1, dams] = 1
     # define the right hand side of the constraint Mx = m
-    m = np.full(2, 0.5, dtype=float)
+    m = np.full(2, 0.5, dtype=np.floating)
     model.addConstr(M@w == m, name="sum-to-half")
 
     # conic constraint which comes from robust optimization
@@ -280,9 +280,9 @@ def gurobi_robust_genetics(
 
 
 def gurobi_robust_genetics_sqp(
-    sigma: npt.NDArray[np.floating] | sparse.sparray,
+    sigma: npt.NDArray[np.floating] | sparse.spmatrix,
     mubar: npt.NDArray[np.floating],
-    omega: npt.NDArray[np.floating] | sparse.sparray,
+    omega: npt.NDArray[np.floating] | sparse.spmatrix,
     sires,  # type could be np.ndarray, sets[ints], lists[int], range, etc
     dams,   # type could be np.ndarray, sets[ints], lists[int], range, etc
     lam: float,  # cannot be called `lambda`, that's reserved in Python
@@ -376,7 +376,7 @@ def gurobi_robust_genetics_sqp(
     ndarray
         Portfolio vector which Gurobi has determined is a solution.
     float
-        Auxiliary variable corresponding to uncertainty associated with the
+        Auxillary variable corresponding to uncertainty associated with the
         portfolio vector which Gurobi has determined is a solution.
     float
         Value of the objective function for returned solution vector.
@@ -453,7 +453,7 @@ def gurobi_robust_genetics_sqp(
 
 def highs_bound_like(dimension: int,
                      value: float | list[float] | npt.NDArray[np.floating]
-                     ):  # BUG -> npt.NDArray[np.floating] | list[float]
+                     ):  # -> npt.NDArray[np.floating] | list[float] # BUG broke
     """
     Helper function which allows HiGHS to interpret variable bounds specified
     either as a vector or a single floating point value. If `value` is an array

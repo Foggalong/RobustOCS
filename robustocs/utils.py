@@ -107,7 +107,7 @@ def print_compare_solutions(
 def check_uncertainty_constraint(
     z: float,
     w: npt.NDArray[np.floating],
-    omega: npt.NDArray[np.floating] | sparse.sparray,
+    omega: npt.NDArray[np.floating] | sparse.spmatrix,
     tol: float = 1e-7,
     debug: bool = False
 ) -> bool:
@@ -123,7 +123,7 @@ def check_uncertainty_constraint(
     Parameters
     ----------
     z : float
-        Auxiliary variable from a solution to the robust selection problem.
+        Auxillary variable from a solution to the robust selection problem.
     w : ndarray
         Portfolio vector from a solution to the robust selection problem.
     omega : ndarray

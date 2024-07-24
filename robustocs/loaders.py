@@ -79,7 +79,7 @@ def load_symmetric_matrix(filename: str, dimension: int
 
 
 def load_symmetric_matrix_coo(filename: str, dimension: int, nnz: int
-                              ) -> sparse.sparray:
+                              ) -> sparse.spmatrix:
     """
     Since neither NumPy or SciPy have a stock way to load symmetric matrices
     into sparse coordinate format, this adds one.
@@ -126,7 +126,7 @@ def load_symmetric_matrix_coo(filename: str, dimension: int, nnz: int
 
             index += 1
 
-    return sparse.coo_array(
+    return sparse.coo_matrix(
         (vals, (rows, cols)),
         shape=(dimension, dimension),
         dtype=np.floating
@@ -134,7 +134,7 @@ def load_symmetric_matrix_coo(filename: str, dimension: int, nnz: int
 
 
 def load_symmetric_matrix_csr(filename: str, dimension: int, nnz: int
-                              ) -> sparse.sparray:
+                              ) -> sparse.spmatrix:
     """
     Loads a symmetric matrix into compressed sparse row format. It does this
     by first loading into sparse coordinate format and then converting with
@@ -157,7 +157,7 @@ def load_symmetric_matrix_csr(filename: str, dimension: int, nnz: int
     """
 
     matrix = load_symmetric_matrix_coo(filename, dimension, nnz)
-    return sparse.csr_array(matrix)
+    return sparse.csr_matrix(matrix)
 
 
 def load_ped(filename: str) -> dict[int, list[int]]:
@@ -238,9 +238,9 @@ def load_problem(A_filename: str, E_filename: str, S_filename: str,
                  nnzA: int | None = None, nnzS: int | None = None,
                  dimension: int | None = None, pedigree: bool = False,
                  issparse: bool = False
-                 ) -> tuple[npt.NDArray[np.floating] | sparse.sparray,
+                 ) -> tuple[npt.NDArray[np.floating] | sparse.spmatrix,
                             npt.NDArray[np.floating],
-                            npt.NDArray[np.floating] | sparse.sparray,
+                            npt.NDArray[np.floating] | sparse.spmatrix,
                             int]:
     """
     Load a robust genetic selection problem into Python.
@@ -274,19 +274,19 @@ def load_problem(A_filename: str, E_filename: str, S_filename: str,
 
     Returns
     -------
-    ndarray or sparray
+    ndarray or spmatrix
         Covariance matrix of candidates in the cohort.
     ndarray
         Vector of expected values of the expected breeding values of
         candidates in the cohort.
-    ndarray or sparray
+    ndarray or spmatrix
         Covariance matrix of expected breeding values of candidates in the
         cohort.
     int
         Dimension of the problem.
     """
 
-    E = np.loadtxt(E_filename, dtype=float)
+    E = np.loadtxt(E_filename, dtype=np.floating)
     # if dimension not specified, use `E` which doesn't need preallocation
     if not dimension:
         assert isinstance(E.size, int)  # catches E being empty
@@ -307,7 +307,7 @@ def load_problem(A_filename: str, E_filename: str, S_filename: str,
         A = makeA(load_ped(A_filename))
         # HACK this loads the full matrix, then converts it down to sparse
         if issparse:
-            A = sparse.coo_array(A)
+            A = sparse.coo_matrix(A)
     else:
         if issparse:
             if not nnzA:
