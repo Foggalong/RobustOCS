@@ -11,7 +11,97 @@ import numpy.typing as npt  # variable typing definitions for NumPy
 from scipy import sparse    # used for sparse matrix format
 
 # controls what's imported on `from robustocs.utils import *`
-__all__ = ["print_compare_solutions", "check_uncertainty_constraint"]
+__all__ = [
+    "expected_genetic_merit",
+    "group_coancestry",
+    "group_coancestry_fast",
+    "print_compare_solutions",
+    "check_uncertainty_constraint"
+]
+
+
+def expected_genetic_merit(w: npt.ArrayLike, mu: npt.ArrayLike) -> np.floating:
+    """
+    Shortcut function for computing the expected genetic merit (w'μ) of a
+    particular selection of candidates (w).
+
+    Parameters
+    ----------
+    w : ndarray
+        Portfolio vector representing a particular selection.
+    mu : ndarray
+        Vector of expected breeding values for the cohort.
+
+    Returns
+    -------
+    float
+        The expected genetic merit of the selection.
+    """
+
+    return w.transpose() @ mu
+
+
+def group_coancestry(w: npt.ArrayLike, sigma: npt.ArrayLike) -> np.floating:
+    """
+    Shortcut function for computing the group co-ancestry (w'Σw) of a
+    particular selection of candidates (w).
+
+    Parameters
+    ----------
+    w : ndarray
+        Portfolio vector representing a particular selection.
+    sigma : ndarray
+        Relationship matrix for the cohort.
+
+    Returns
+    -------
+    float
+        The expected genetic merit of the selection.
+    """
+
+    return w.transpose() @ sigma @ w
+
+
+def group_coancestry_fast(
+    mu: npt.NDArray[np.floating],
+    lam: float,  # cannot be called `lambda`, that's reserved in Python
+    obj: float,
+    w: npt.ArrayLike,
+    kappa: float = 0,
+    z: np.floating = 0
+) -> np.floating:
+    """
+    Quicker way to compute the group co-ancestry (w'Σw) of a particular
+    selection of candidates (w) in situations where the OCS problem has
+    already been solved. While computing the matrix product directly is
+    O(n²), using the objective value we can do it in O(n).
+
+    Parameters
+    ----------
+    mu : ndarray
+        Vector of expected returns for candidates in the cohorts for selection.
+    lam : float
+        Lambda parameter used when solving the OCS problem.
+    obj : float
+        Value of the objective function for returned solution vector.
+    w: ndarray
+        Portfolio vector which a solver determined was part of a solution.
+    kappa : float, optional
+        Kappa parameter used when solving the OCS problem. If not provided
+        then assumes that it's solving the non-robust OCS problem. Default
+        value is zero.
+    z : float, optional
+        Auxiliary variable which a solver determined was part of a solution.
+        If not provided then assumes that it's solving the non-robust OCS
+        problem. Default value is zero.
+
+    Returns
+    -------
+    float
+        The expected genetic merit of the selection.
+    """
+
+    return (2/lam) * (w.transpose()@mu - kappa*z - obj)
 
 
 def print_compare_solutions(
