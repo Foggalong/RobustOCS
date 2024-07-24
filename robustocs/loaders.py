@@ -21,8 +21,8 @@ __all__ = ["load_ped", "makeA", "load_problem"]
 
 def count_sparse_nnz(filename: str) -> int:
     """
-    Return the number of non-zero entries for a matrix stored in symmetric
-    sparse coordinate format.
+    Return the number of non-zero entries for a matrix stored in a file
+    in symmetric sparse coordinate (COO) format.
 
     Parameters
     ----------
@@ -78,11 +78,11 @@ def load_symmetric_matrix(filename: str, dimension: int
     return matrix
 
 
-def load_symmetric_matrix_coo(filename: str, dimension: int, nnz: int
-                              ) -> sparse.spmatrix:
+def load_sparse_symmetric_matrix(filename: str, dimension: int, nnz: int,
+                                 format: str = 'csr') -> sparse.spmatrix:
     """
     Since neither NumPy or SciPy have a stock way to load symmetric matrices
-    into sparse coordinate format, this adds one.
+    stored in symmetric coordinate format into SciPy's formats, this adds one.
 
     Parameters
     ----------
@@ -93,10 +93,14 @@ def load_symmetric_matrix_coo(filename: str, dimension: int, nnz: int
     nnz : int
         Number of non-zero entries in the matrix stored in the file. Note that
         due to symmetry, this may be larger than the number of lines in file.
+    format : str
+        Format to use for the sparse matrix. Options available are 'coo' (for
+        sparse coordinate format) or 'csr' (compressed sparse row format).
+        Default value is `csr`.
 
     Returns
     -------
-    ndarray
+    spmatrix
         The matrix represented by the file.
     """
 
@@ -126,38 +130,20 @@ def load_symmetric_matrix_coo(filename: str, dimension: int, nnz: int
 
             index += 1
 
-    return sparse.coo_matrix(
-        (vals, (rows, cols)),
-        shape=(dimension, dimension),
-        dtype=np.floating
-    )
-
-
-def load_symmetric_matrix_csr(filename: str, dimension: int, nnz: int
-                              ) -> sparse.spmatrix:
-    """
-    Loads a symmetric matrix into compressed sparse row format. It does this
-    by first loading into sparse coordinate format and then converting with
-    Scipy. TODO: add a more efficient way which loads into CSR directly.
-
-    Parameters
-    ----------
-    filename : str
-        Filename, including extension. Space-separated data file.
-    dimension : int
-        Number of rows (and columns) of the matrix stored in the file.
-    nnz : int
-        Number of non-zero entries in the matrix stored in the file. Note that
-        due to symmetry, this may be larger than the number of lines in file.
-
-    Returns
-    -------
-    ndarray
-        The matrix represented by the file.
-    """
-
-    matrix = load_symmetric_matrix_coo(filename, dimension, nnz)
-    return sparse.csr_matrix(matrix)
+    if format == 'coo':
+        return sparse.coo_matrix(
+            (vals, (rows, cols)),
+            shape=(dimension, dimension),
+            dtype=np.floating
+        )
+    elif format == 'csr':
+        return sparse.csr_matrix(
+            (vals, (rows, cols)),
+            shape=(dimension, dimension),
+            dtype=np.floating
+        )
+    else:
+        raise ValueError("Format must be 'coo' or 'csr'.")
 
 
 def load_ped(filename: str) -> dict[int, list[int]]:
@@ -296,7 +282,7 @@ def load_problem(A_filename: str, E_filename: str, S_filename: str,
     if issparse:
         if not nnzS:
             nnzS = count_sparse_nnz(S_filename)
-        S = load_symmetric_matrix_csr(S_filename, dimension, nnzS)
+        S = load_sparse_symmetric_matrix(S_filename, dimension, nnzS)
     else:
         # if nnzS was defined here, it's ignored as a parameter
         S = load_symmetric_matrix(S_filename, dimension)
@@ -312,7 +298,7 @@ def load_problem(A_filename: str, E_filename: str, S_filename: str,
         if issparse:
             if not nnzA:
                 nnzA = count_sparse_nnz(A_filename)
-            A = load_symmetric_matrix_csr(A_filename, dimension, nnzA)
+            A = load_sparse_symmetric_matrix(A_filename, dimension, nnzA)
         else:
             # if nnzA was defined here, it's ignored as a parameter
             A = load_symmetric_matrix(A_filename, dimension)

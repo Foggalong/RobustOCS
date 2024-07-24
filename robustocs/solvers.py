@@ -557,7 +557,6 @@ def highs_standard_genetics(
     model.lp_.col_upper_ = highs_bound_like(dimension, upper_bound)
 
     # define the quadratic term in the objective
-    sigma = sparse.csc_matrix(sigma)  # BUG is sigma in CSR or CSC format?
     model.hessian_.dim_ = dimension
     model.hessian_.start_ = sigma.indptr
     model.hessian_.index_ = sigma.indices
