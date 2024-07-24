@@ -376,7 +376,7 @@ def gurobi_robust_genetics_sqp(
     ndarray
         Portfolio vector which Gurobi has determined is a solution.
     float
-        Auxillary variable corresponding to uncertainty associated with the
+        Auxiliary variable corresponding to uncertainty associated with the
         portfolio vector which Gurobi has determined is a solution.
     float
         Value of the objective function for returned solution vector.
@@ -453,7 +453,7 @@ def gurobi_robust_genetics_sqp(
 
 def highs_bound_like(dimension: int,
                      value: float | list[float] | npt.NDArray[np.floating]
-                     ):  # -> npt.NDArray[np.floating] | list[float] # BUG broke
+                     ):  # BUG broke: npt.NDArray[np.floating] | list[float]
     """
     Helper function which allows HiGHS to interpret variable bounds specified
     either as a vector or a single floating point value. If `value` is an array
@@ -705,7 +705,7 @@ def highs_robust_genetics_sqp(
     ndarray
         Portfolio vector which Gurobi has determined is a solution.
     float
-        Auxillary variable corresponding to uncertainty associated with the
+        Auxiliary variable corresponding to uncertainty associated with the
         portfolio vector which Gurobi has determined is a solution.
     float
         Value of the objective function for returned solution vector.
@@ -731,7 +731,6 @@ def highs_robust_genetics_sqp(
     model.lp_.col_upper_ = highs_bound_like(dimension, upper_bound)
 
     # define the quadratic term in the objective
-    sigma = sparse.csc_matrix(sigma)  # BUG is sigma in CSR or CSC format?
     model.hessian_.dim_ = dimension
     model.hessian_.start_ = sigma.indptr
     model.hessian_.index_ = sigma.indices

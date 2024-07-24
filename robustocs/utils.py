@@ -123,7 +123,7 @@ def check_uncertainty_constraint(
     Parameters
     ----------
     z : float
-        Auxillary variable from a solution to the robust selection problem.
+        Auxiliary variable from a solution to the robust selection problem.
     w : ndarray
         Portfolio vector from a solution to the robust selection problem.
     omega : ndarray
