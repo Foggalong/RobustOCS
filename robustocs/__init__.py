@@ -18,7 +18,8 @@ __all__ = [
     "load_ped", "makeA", "load_problem",
     # from solvers.py
     "gurobi_standard_genetics", "gurobi_robust_genetics",
-    "gurobi_robust_genetics_sqp", "highs_standard_genetics",
+    "gurobi_robust_genetics_sqp", "gurobi_robust_genetics_conic",
+    "highs_standard_genetics", "highs_robust_genetics",
     "highs_robust_genetics_sqp",
     # from utils.py
     "print_compare_solutions", "check_uncertainty_constraint"

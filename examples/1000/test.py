@@ -32,7 +32,7 @@ tol = 1e-3
 w, obj = rocs.highs_standard_genetics(sigma, mubar, sires, dams, lam, n)
 assert ((w - true_std) < tol).all(), "QP in HiGHS was incorrect"
 
-w, z, obj = rocs.highs_robust_genetics_sqp(
+w, z, obj = rocs.highs_robust_genetics(
     sigma, mubar, omega, sires, dams, lam, kap, n)
 assert ((w - true_rob) < tol).all(), "conic in HiGHS was incorrect"
 

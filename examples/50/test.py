@@ -43,7 +43,7 @@ w, z, obj = rocs.gurobi_robust_genetics_sqp(
     sigma, mubar, omega, sires, dams, lam, kap, n)
 assert ((w - true_rob) < tol).all(), "SQP in Gurobi was incorrect"
 
-w, z, obj = rocs.highs_robust_genetics_sqp(
+w, z, obj = rocs.highs_robust_genetics(
     sigma, mubar, omega, sires, dams, lam, kap, n)
 assert ((w - true_rob) < tol).all(), "conic in HiGHS was incorrect"
 

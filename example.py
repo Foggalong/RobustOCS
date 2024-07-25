@@ -22,7 +22,7 @@ kap = 1
 # computes the standard and robust genetic selection solutions
 w_std, obj_std = robustocs.highs_standard_genetics(
     sigma, mubar, sires, dams, lam, n)
-w_rbs, z_rbs, obj_rbs = robustocs.highs_robust_genetics_sqp(
+w_rbs, z_rbs, obj_rbs = robustocs.highs_robust_genetics(
     sigma, mubar, omega, sires, dams, lam, kap, n)
 
 robustocs.print_compare_solutions(

@@ -15,9 +15,11 @@ from scipy import sparse    # used for sparse matrix format
 # controls what's imported on `from robustocs.solvers import *`
 __all__ = [
     "gurobi_standard_genetics",
-    "gurobi_robust_genetics",
+    "gurobi_robust_genetics",  # alias
+    "gurobi_robust_genetics_conic",
     "gurobi_robust_genetics_sqp",
     "highs_standard_genetics",
+    "highs_robust_genetics",  # alias
     "highs_robust_genetics_sqp"
 ]
 
@@ -140,7 +142,7 @@ def gurobi_standard_genetics(
     return np.array(w.X), model.ObjVal  # HACK np.array avoids issue #9
 
 
-def gurobi_robust_genetics(
+def gurobi_robust_genetics_conic(
     sigma: npt.NDArray[np.floating] | sparse.spmatrix,
     mubar: npt.NDArray[np.floating],
     omega: npt.NDArray[np.floating] | sparse.spmatrix,
@@ -449,6 +451,10 @@ def gurobi_robust_genetics_sqp(
         model.addConstr(alpha*z >= w_star.transpose()@omega@w, name=f"P{i}")
 
     return np.array(w.X), z.X, model.ObjVal  # HACK np.array avoids issue #9
+
+
+# make gurobi_robust_genetics(...) an alias of the fastest method
+gurobi_robust_genetics = gurobi_robust_genetics_conic
 
 
 def highs_bound_like(dimension: int,
@@ -828,3 +834,7 @@ def highs_robust_genetics_sqp(
 
     # final value of solution is the z value, return separately
     return w_star, z_star, objective_value
+
+
+# make highs_robust_genetics(...) an alias of the fastest method
+highs_robust_genetics = highs_robust_genetics_sqp
