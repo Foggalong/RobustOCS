@@ -6,13 +6,14 @@ import robustocs as rocs
 # SETUP
 # -----
 
-# load in the problem variables
-sigma, mubar, omega, n = rocs.load_problem(
-    "A04.txt",
-    "EBV04.txt",
-    "S04.txt",
+# load in the problem variables (using underscore for those dropped)
+sigma, mubar, omega, n, _, _, _ = rocs.load_problem(
+    sigma_filename="A04.txt",
+    mu_filename="EBV04.txt",
+    omega_filename="S04.txt",
     issparse=True
 )
+
 sires = range(0, n, 2)
 dams = range(1, n, 2)
 lam = 0.5

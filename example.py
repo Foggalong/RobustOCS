@@ -3,19 +3,15 @@
 import robustocs
 
 # key problem variables loaded from standard format txt files
-sigma, mubar, omega, n = robustocs.load_problem(
-    "examples/04/A04.txt",
-    "examples/04/EBV04.txt",
-    "examples/04/S04.txt",
+sigma, mubar, omega, n, sires, dams, names = robustocs.load_problem(
+    sigma_filename="examples/04/A04.txt",
+    mu_filename="examples/04/EBV04.txt",
+    omega_filename="examples/04/S04.txt",
+    sex_filename="examples/04/SEX04.txt",
     issparse=True
 )
 
-# NOTE this trick of handling sex data is specific to the initial simulation
-# data which is structured so that candidates alternate between sires (which
-# have even indices) and dams (which have odd indices).
-sires = range(0, n, 2)
-dams = range(1, n, 2)
-
+# parameters with which to solve the problem
 lam = 0.5
 kap = 1
 

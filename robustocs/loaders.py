@@ -146,6 +146,61 @@ def load_sparse_symmetric_matrix(filename: str, dimension: int, nnz: int,
         raise ValueError("Format must be 'coo' or 'csr'.")
 
 
+def load_sexes(filename: str, dimension: int) -> tuple[
+    npt.NDArray[np.unsignedinteger],
+    npt.NDArray[np.unsignedinteger],
+    npt.NDArray[np.str_]
+]:
+    """
+    Function for loading cohort sex data from file. Uniquely among the
+    file formats we're working with, the format for sex data also includes
+    a label for each candidate in the cohort, so also returns those.
+
+    Parameters
+    ----------
+    filename : str
+        Filename, including extension. Space-separated data file.
+    dimension : int
+        Number of rows of data stored in the file
+
+    Returns
+    -------
+    ndarray
+        Array of indices for sires in the cohort.
+    ndarray
+        Array of indices for dams in the cohort.
+    ndarray
+        Array of labels for each candidate in the cohort.
+    """
+
+    # preallocate output vectors
+    sires = np.zeros((dimension,), dtype=np.unsignedinteger)
+    dams = np.zeros((dimension,), dtype=np.unsignedinteger)
+    names = np.zeros((dimension,), dtype=np.str_)
+
+    # index trackers
+    sire_count: int = 0
+    dam_count: int = 0
+
+    with open(filename, 'r') as file:
+        for line in file:
+            name, sex = line.strip().split(" ")
+
+            if sex == "M":
+                sires[sire_count] = sire_count + dam_count
+                sire_count += 1
+            elif sex == "F":
+                dams[dam_count] = sire_count + dam_count
+                dam_count += 1
+            else:
+                raise ValueError(f"invalid sex input {sex}")
+
+            names[sire_count + dam_count - 1] = name
+
+    # cull the entries of the index vectors which weren't used
+    return sires[:sire_count], dams[:dam_count], names
+
+
 def load_ped(filename: str) -> dict[int, list[int]]:
     """
     Function for reading pedigree files into a Python dictionary.
@@ -220,87 +275,129 @@ def makeA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
 # problems into Python. At the moment this is through a single function,
 # though may need to be split if more features are added.
 
-def load_problem(A_filename: str, E_filename: str, S_filename: str,
-                 nnzA: int | None = None, nnzS: int | None = None,
-                 dimension: int | None = None, pedigree: bool = False,
-                 issparse: bool = False
-                 ) -> tuple[npt.NDArray[np.floating] | sparse.spmatrix,
-                            npt.NDArray[np.floating],
-                            npt.NDArray[np.floating] | sparse.spmatrix,
-                            int]:
+def load_problem(
+    sigma_filename: str,
+    mu_filename: str,
+    omega_filename: str | None = None,
+    sex_filename: str | None = None,
+    nnz_sigma: int | None = None,
+    nnz_omega: int | None = None,
+    dimension: int | None = None,
+    pedigree: bool = False,
+    issparse: bool = False
+) -> tuple[
+    npt.NDArray[np.floating] | sparse.spmatrix,
+    npt.NDArray[np.floating],
+    npt.NDArray[np.floating] | sparse.spmatrix | None,
+    int,
+    npt.NDArray[np.unsignedinteger] | None,
+    npt.NDArray[np.unsignedinteger] | None,
+    npt.NDArray[np.str_] | None
+]:
     """
     Load a robust genetic selection problem into Python.
 
     Parameters
     ----------
-    A_filename : str
-        Filename for a file which encodes `A` (which is Sigma) whether in
-        sparse coordinate or pedigree format.
-    E_filename : str
-        Filename for a file which encodes `E` (which is Mu-bar).
-    S_filename : str
-        Filename for a file which encodes `S` (which is Omega) which will be
-        in sparse coordinate format.
-    nnzA : int, optional
-        Number of non-zeros in the matrix A. If not provided and `sparse` is
+    sigma_filename : str
+        Filename for a file which encodes sigma, whether that's in sparse
+        coordinate format or pedigree format.
+    mu_filename : str
+        Filename for a file which encodes mu or mubar.
+    omega_filename : str, optional
+        Filename for a file which encodes omega, which will be in sparse
+        coordinate format. Default value is `None`.
+    sex_filename : str, optional
+        Filename for a file which encodes the sex data for the cohort. Also
+        includes a label for each candidate. Default value is `None`.
+    nnz_sigma : int, optional
+        Number of non-zeros in sigma. If not provided and `sparse` is
         True, value computed using `count_sparse_nnz`. Default is `None`.
-    nnzS : int, optional
-        Number of non-zeros in the matrix S. If not provided and `sparse` is
+    nnz_omega : int, optional
+        Number of non-zeros in omega. If not provided and `sparse` is
         True, value computed using `count_sparse_nnz`. Default is `None`.
-    dimension : int or None, optional
+    dimension : int, optional
         The size of the problem, which can be specified to aid preallocation
-        or worked out explicitly from the `E` / mu produced. Default value
-        is `None`, i.e. the value is derived from `E`.
+        or worked out explicitly from the mu / mubar produced. Default value
+        is `None`, i.e. the value is derived from mu.
     pedigree : bool, optional
-        Signifies whether `A` is stored as a pedigree structure (`True`)
+        Signifies whether sigma is stored as a pedigree structure (`True`)
         or in sparse coordinate format (`False`). Default value is `False`.
     issparse : bool, optional
-        Signifies whether `A` and `S` should be returned in compressed sparse
-        row format. Default value is `False`.
+        Signifies whether sigma and omega should be returned in compressed
+        sparse row format. Default value is `False`.
 
     Returns
     -------
     ndarray or spmatrix
-        Covariance matrix of candidates in the cohort.
+        Covariance matrix of candidates in the cohort (sigma).
     ndarray
         Vector of expected values of the expected breeding values of
-        candidates in the cohort.
-    ndarray or spmatrix
+        candidates in the cohort (mu).
+    ndarray, spmatrix, or None
         Covariance matrix of expected breeding values of candidates in the
-        cohort.
+        cohort (omega). If a filename was not provided, value is `None`.
     int
-        Dimension of the problem.
+        Dimension of the problem (n).
+    ndarray or None
+        Array of indices of sires in the cohort (S). If a filename for sex data
+        was not provided, value is `None`.
+    ndarray or None
+        Array of indices of dams in the cohort (D). If a filename for sex data
+        was not provided, value is `None`.
+    ndarray or None
+        Array of names given to the original candidates in the cohort. If a
+        filename for sex data was not provided (which also includes name data),
+        then the value is `None`.
     """
 
-    E = np.loadtxt(E_filename, dtype=np.floating)
-    # if dimension not specified, use `E` which doesn't need preallocation
+    mu: npt.NDArray[np.floating] = np.loadtxt(mu_filename, dtype=np.floating)
+    # if dimension not specified, use `mu` which doesn't need preallocation
     if not dimension:
-        assert isinstance(E.size, int)  # catches E being empty
-        dimension = E.size
+        assert isinstance(mu.size, int)  # catches mu being empty
+        dimension = mu.size
 
-    # can load S from coordinates to SciPy's CSR or NumPy's dense format
-    if issparse:
-        if not nnzS:
-            nnzS = count_sparse_nnz(S_filename)
-        S = load_sparse_symmetric_matrix(S_filename, dimension, nnzS)
+    # filename for sex data is optional, so skip if not provided
+    if sex_filename is not None:
+        sires, dams, names = load_sexes(sex_filename, dimension)
     else:
-        # if nnzS was defined here, it's ignored as a parameter
-        S = load_symmetric_matrix(S_filename, dimension)
+        sires = dams = names = None
 
-    # A can be stored as a pedigree or by coordinates and can be loaded to
+    # filename for omega is optional, so skip if not provided
+    if omega_filename is not None:
+        # can load omega from file to SciPy's CSR or NumPy's dense format
+        if issparse:
+            # find omega's number of non zeros if it wasn't given
+            if not nnz_omega:
+                nnz_omega = count_sparse_nnz(omega_filename)
+            omega: sparse.spmatrix = load_sparse_symmetric_matrix(
+                omega_filename, dimension, nnz_omega
+            )
+        else:
+            # if nnz_omega was defined, it's ignored as a parameter
+            omega: npt.NDArray[np.floating] = load_symmetric_matrix(
+                omega_filename, dimension
+            )
+
+    # sigma can be stored as a pedigree or by coordinates and can be loaded to
     # SciPy's CSR or Numpy's dense format. Hence have four branches below.
     if pedigree:
-        A = makeA(load_ped(A_filename))
+        sigma: npt.NDArray[np.floating] = makeA(load_ped(sigma_filename))
         # HACK this loads the full matrix, then converts it down to sparse
         if issparse:
-            A = sparse.coo_matrix(A)
+            sigma: sparse.spmatrix = sparse.coo_matrix(sigma)
     else:
         if issparse:
-            if not nnzA:
-                nnzA = count_sparse_nnz(A_filename)
-            A = load_sparse_symmetric_matrix(A_filename, dimension, nnzA)
+            # find sigma's number of non zeros if it wasn't given
+            if not nnz_sigma:
+                nnz_sigma = count_sparse_nnz(sigma_filename)
+            sigma: sparse.spmatrix = load_sparse_symmetric_matrix(
+                sigma_filename, dimension, nnz_sigma
+            )
         else:
-            # if nnzA was defined here, it's ignored as a parameter
-            A = load_symmetric_matrix(A_filename, dimension)
+            # if nnz_sigma was defined here, it's ignored as a parameter
+            sigma: npt.NDArray[np.floating] = load_symmetric_matrix(
+                sigma_filename, dimension
+            )
 
-    return A, E, S, dimension
+    return sigma, mu, omega, dimension, sires, dams, names
