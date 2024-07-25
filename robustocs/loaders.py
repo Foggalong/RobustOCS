@@ -149,7 +149,7 @@ def load_sparse_symmetric_matrix(filename: str, dimension: int, nnz: int,
 def load_sexes(filename: str, dimension: int) -> tuple[
     npt.NDArray[np.unsignedinteger],
     npt.NDArray[np.unsignedinteger],
-    npt.NDArray[np.str]
+    npt.NDArray[np.str_]
 ]:
     """
     Function for loading cohort sex data from file. Uniquely among the
@@ -176,7 +176,7 @@ def load_sexes(filename: str, dimension: int) -> tuple[
     # preallocate output vectors
     sires = np.zeros((dimension,), dtype=np.unsignedinteger)
     dams = np.zeros((dimension,), dtype=np.unsignedinteger)
-    names = np.zeros((dimension,), dtype=np.str)
+    names = np.zeros((dimension,), dtype=np.str_)
 
     # index trackers
     sire_count: int = 0
@@ -292,7 +292,7 @@ def load_problem(
     int,
     npt.NDArray[np.unsignedinteger] | None,
     npt.NDArray[np.unsignedinteger] | None,
-    npt.NDArray[np.str] | None
+    npt.NDArray[np.str_] | None
 ]:
     """
     Load a robust genetic selection problem into Python.
