@@ -45,7 +45,6 @@ def solveROCS(
     solver: str = 'highs',
     issparse: bool = False,
     time_limit: float | None = None,
-    max_duality_gap: float | None = None,
     max_iterations: int = 1000,
     robust_gap_tol: float = 1e-7,
     model_output: str = '',
@@ -106,10 +105,6 @@ def solveROCS(
     time_limit : float, optional
         Maximum amount of time in seconds to give the solver to find a solution
         to the problem. Default value is `None`, i.e. no time limit.
-    max_duality_gap : float, optional
-        Maximum allowable duality gap to give the solver when finding a
-        solution to the problem. Default value is `None`, i.e. do not allow
-        any duality gap.
     max_iterations : int, optional
         Maximum number of iterations that can be taken in solving the robust
         problem using SQP. This is specific to robust optimization and will be
@@ -194,11 +189,8 @@ def solveROCS(
             raise ValueError(f"'{name}' must be 'True' or 'False' boolean")
 
     # STRICTLY POSITIVE FLOATS
-    # validate time_limit and max_duality_gap are strictly positive
-    for name, value in {
-        "time limit": time_limit,
-        "duality gap": max_duality_gap
-    }.items():
+    # validate time_limit is strictly positive
+    for name, value in {"time limit": time_limit}.items():
         try:
             if value is not None and float(value) <= 0:
                 raise ValueError
@@ -219,18 +211,18 @@ def solveROCS(
         rocs_solver = getattr(solvers, f"{solver}_standard_genetics")
         portfolio, objective = rocs_solver(
             sigma, mu, sires, dams, lam, n, upper_bound, lower_bound,
-            time_limit, max_duality_gap, model_output, debug
+            time_limit, model_output, debug
         )
     elif solver == 'highs':  # and method is robust
         portfolio, z_value, objective = solvers.highs_robust_genetics(
             sigma, mu, omega, sires, dams, lam, kappa, n, upper_bound,
-            lower_bound, time_limit, max_duality_gap, max_iterations,
-            robust_gap_tol, model_output, debug
+            lower_bound, time_limit, max_iterations, robust_gap_tol,
+            model_output, debug
         )
     else:  # solver is gurobi, method is robust
         portfolio, z_value, objective = solvers.gurobi_robust_genetics(
             sigma, mu, omega, sires, dams, lam, kappa, n, upper_bound,
-            lower_bound, time_limit, max_duality_gap, model_output, debug
+            lower_bound, time_limit, model_output, debug
         )
 
     # CHECKING
