@@ -34,7 +34,6 @@ def gurobi_standard_genetics(
     upper_bound: npt.NDArray[np.floating] | float = 1.0,
     lower_bound: npt.NDArray[np.floating] | float = 0.0,
     time_limit: float | None = None,
-    max_duality_gap: float | None = None,
     model_output: str = '',
     debug: bool = False
 ) -> tuple[npt.NDArray[np.floating], float]:
@@ -81,9 +80,6 @@ def gurobi_standard_genetics(
     time_limit : float or None, optional
         Maximum amount of time in seconds to give Gurobi to solve the problem.
         Default value is `None`, i.e. no time limit.
-    max_duality_gap : float or None, optional
-        Maximum allowable duality gap to give Gurobi when solving the problem.
-        Default value is `None`, i.e. do not allow any duality gap.
     model_output : str, optional
         Flag which controls whether Gurobi saves the model file to the working
         directory. If given, the string is used as the file name, 'str.mps',
@@ -131,8 +127,6 @@ def gurobi_standard_genetics(
     # optional controls to stop Gurobi taking too long
     if time_limit:
         model.setParam(gp.GRB.Param.TimeLimit, time_limit)
-    if max_duality_gap:
-        model.setParam('MIPGap', max_duality_gap)
 
     # model file can be used externally for verification
     if model_output:
@@ -154,7 +148,6 @@ def gurobi_robust_genetics_conic(
     upper_bound: npt.NDArray[np.floating] | float = 1.0,
     lower_bound: npt.NDArray[np.floating] | float = 0.0,
     time_limit: float | None = None,
-    max_duality_gap: float | None = None,
     model_output: str = '',
     debug: bool = False
 ) -> tuple[npt.NDArray[np.floating], float, float]:
@@ -213,9 +206,6 @@ def gurobi_robust_genetics_conic(
     time_limit : float or None, optional
         Maximum amount of time in seconds to give Gurobi to solve the problem.
         Default value is `None`, i.e. no time limit.
-    max_duality_gap : float or None, optional
-        Maximum allowable duality gap to give Gurobi when solving the problem.
-        Default value is `None`, i.e. do not allow any duality gap.
     model_output : str, optional
         Flag which controls whether Gurobi saves the model file to the working
         directory. If given, the string is used as the file name, 'str.mps',
@@ -270,8 +260,6 @@ def gurobi_robust_genetics_conic(
     # optional controls to stop Gurobi taking too long
     if time_limit:
         model.setParam(gp.GRB.Param.TimeLimit, time_limit)
-    if max_duality_gap:
-        model.setParam('MIPGap', max_duality_gap)
 
     # model file can be used externally for verification
     if model_output:
@@ -293,7 +281,6 @@ def gurobi_robust_genetics_sqp(
     upper_bound: npt.NDArray[np.floating] | float = 1.0,
     lower_bound: npt.NDArray[np.floating] | float = 0.0,
     time_limit: float | None = None,
-    max_duality_gap: float | None = None,
     max_iterations: int = 1000,
     robust_gap_tol: float = 1e-7,
     model_output: str = '',
@@ -355,9 +342,6 @@ def gurobi_robust_genetics_sqp(
         Maximum amount of time in seconds to give Gurobi to solve sub-problem.
         Note it does *not* constrain how much time is taken overall. Default
         value is `None`, i.e. no time limit.
-    max_duality_gap : float or None, optional
-        Maximum allowable duality gap to give Gurobi when solving the problem.
-        Default value is `None`, i.e. do not allow any duality gap.
     max_iterations : int, optional
         Maximum number of iterations that can be taken in solving the problem,
         i.e. the maximum number of constraints to use to approximate the conic
@@ -416,8 +400,6 @@ def gurobi_robust_genetics_sqp(
     # optional controls to stop Gurobi taking too long
     if time_limit:
         model.setParam(gp.GRB.Param.TimeLimit, time_limit)
-    if max_duality_gap:
-        model.setParam('MIPGap', max_duality_gap)
 
     for i in range(max_iterations):
         # optimization of the model, print weights and objective
@@ -480,7 +462,6 @@ def highs_standard_genetics(
     upper_bound: npt.NDArray[np.floating] | list[float] | float = 1.0,
     lower_bound: npt.NDArray[np.floating] | list[float] | float = 0.0,
     time_limit: float | None = None,
-    max_duality_gap: float | None = None,
     model_output: str = '',
     debug: bool = False
 ) -> tuple[npt.NDArray[np.floating], float]:
@@ -527,9 +508,6 @@ def highs_standard_genetics(
     time_limit : float or None, optional
         Maximum amount of time in seconds to give HiGHS to solve the problem.
         Default value is `None`, i.e. no time limit.
-    max_duality_gap : float or None, optional
-        HiGHS does not support a tolerance on duality gap for this type of
-        problem, so regardless whether specified the value will be ignored.
     model_output : str, optional
         Flag which controls whether Gurobi saves the model file to the working
         directory. If given, the string is used as the file name, 'str.mps',
@@ -586,8 +564,6 @@ def highs_standard_genetics(
     # optional controls to stop HiGHS taking too long
     if time_limit:
         h.setOptionValue('time_limit', time_limit)
-    if max_duality_gap:
-        pass  # NOTE HiGHS doesn't support duality gap, skip
 
     # HiGHS' passModel returns a status indicating its success
     pass_status: highspy._core.HighsStatus = h.passModel(model)
@@ -633,7 +609,6 @@ def highs_robust_genetics_sqp(
     upper_bound: npt.NDArray[np.floating] | list[float] | float = 1.0,
     lower_bound: npt.NDArray[np.floating] | list[float] | float = 0.0,
     time_limit: float | None = None,
-    max_duality_gap: float | None = None,
     max_iterations: int = 1000,
     robust_gap_tol: float = 1e-7,
     model_output: str = '',
@@ -654,9 +629,6 @@ def highs_robust_genetics_sqp(
     portfolio. It does this using sequential quadratic programming (SQP),
     approximating the conic constraint associated with robustness using
     a series of linear constraints.
-
-    NOTE: unlike Gurobi, this doesn't yet have controls for `time_limit`
-    or `max_duality_gap` to be passed to HiGHS.
 
     Parameters
     ----------
@@ -773,8 +745,6 @@ def highs_robust_genetics_sqp(
     # optional controls to stop HiGHS taking too long
     if time_limit:
         h.setOptionValue('time_limit', time_limit)
-    if max_duality_gap:
-        pass  # NOTE HiGHS doesn't support duality gap, skip
 
     for i in range(max_iterations):
         run_status: highspy._core.HighsStatus = h.run()
