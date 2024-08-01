@@ -763,7 +763,9 @@ def highs_robust_genetics_sqp(
     for i in range(max_iterations):
         # use at most the remaining unused time
         if time_limit:
-            h.setOptionValue('time_limit', time_remaining)
+            # NOTE for SQP it is not possible to restrict HiGHS to use
+            # at most the remaining unused time. See issue #16.
+            # h.setOptionValue('time_limit', time_remaining)
             start_time: float = time()
 
         try:
@@ -788,8 +790,8 @@ def highs_robust_genetics_sqp(
         model_status: highspy._core.HighsModelStatus = h.getModelStatus()
         # HiGHS will try to continue if it gets an error, so stop it
         if run_status == highspy.HighsStatus.kError:
-            raise RuntimeError(f"HiGHS at approximation #{i} failed with status "
-                               f"{model_status}")
+            raise RuntimeError(f"HiGHS at approximation #{i} failed with "
+                               f"status {model_status}")
         elif model_status != highspy.HighsModelStatus.kOptimal:
             raise RuntimeError(f"HiGHS did not achieve optimality at "
                                f"approximation #{i}, status {model_status}")
