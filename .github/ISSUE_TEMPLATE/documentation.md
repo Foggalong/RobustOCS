@@ -1,6 +1,6 @@
 ---
 name: Documentation
-about: 'Any issues or requests for the module documentation  '
+about: Any issues or requests for the module documentation
 title: ''
 labels: documentation
 assignees: ''

@@ -1,5 +1,7 @@
 # RobustOCS
 
+[![PyPi](https://img.shields.io/pypi/v/robustocs.svg)](https://pypi.python.org/pypi/robustocs) [![Check Build](https://github.com/Foggalong/RobustOCS/actions/workflows/check-build.yml/badge.svg?branch=main)](https://github.com/Foggalong/RobustOCS/actions/workflows/check-build.yml)
+
 Tools for solving robust optimal contribution selection problems in Python. All code and examples in RobustOCS are fully and freely available for all use under the MIT License.
 
 ## Installation
