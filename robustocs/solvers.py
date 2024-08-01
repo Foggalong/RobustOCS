@@ -11,6 +11,7 @@ import gurobipy as gp       # Gurobi optimization interface
 import highspy              # HiGHS optimization interface
 from math import sqrt       # used within the robust constraint
 from scipy import sparse    # used for sparse matrix format
+from time import time       # used for timing SQP methods
 
 # controls what's imported on `from robustocs.solvers import *`
 __all__ = [
@@ -339,9 +340,8 @@ def gurobi_robust_genetics_sqp(
         of differing bounds for each candidate, or a float which applies to all
         candidates. Default value is `0.0`.
     time_limit : float or None, optional
-        Maximum amount of time in seconds to give Gurobi to solve sub-problem.
-        Note it does *not* constrain how much time is taken overall. Default
-        value is `None`, i.e. no time limit.
+        Maximum amount of time in seconds to give Gurobi to solve the problem.
+        Default value is `None`, i.e. no time limit.
     max_iterations : int, optional
         Maximum number of iterations that can be taken in solving the problem,
         i.e. the maximum number of constraints to use to approximate the conic
@@ -399,11 +399,25 @@ def gurobi_robust_genetics_sqp(
 
     # optional controls to stop Gurobi taking too long
     if time_limit:
-        model.setParam(gp.GRB.Param.TimeLimit, time_limit)
+        time_remaining: float = time_limit
 
     for i in range(max_iterations):
+        # optional controls to stop Gurobi taking too long
+        if time_limit:
+            model.setParam(gp.GRB.Param.TimeLimit, time_remaining)
+
         # optimization of the model, print weights and objective
-        model.optimize()
+        try:
+            model.optimize()
+        except RuntimeError as e:
+            raise RuntimeError(f"Gurobi failed with error:\n{e}")
+
+        # subtract time take from time remaining
+        if time_limit:
+            time_remaining -= model.Runtime
+            if time_remaining < 0:
+                raise RuntimeError(f"Gurobi hit time limit of {time_limit} "
+                                   f"seconds without reaching optimality")
 
         # return model and solution at every approximation to help debug
         if model_output:
@@ -507,7 +521,8 @@ def highs_standard_genetics(
         candidates. Default value is `0.0`.
     time_limit : float or None, optional
         Maximum amount of time in seconds to give HiGHS to solve the problem.
-        Default value is `None`, i.e. no time limit.
+        May over run by one iteration: see issue #16. Default value is `None`,
+        i.e. no time limit.
     model_output : str, optional
         Flag which controls whether Gurobi saves the model file to the working
         directory. If given, the string is used as the file name, 'str.mps',
@@ -572,8 +587,8 @@ def highs_standard_genetics(
         h.writeModel(f"{model_output}.mps")
     # HiGHS will try to continue if it gets an error, so stop it
     if pass_status == highspy.HighsStatus.kError:
-        print(f"h.passModel failed with status {h.getModelStatus()}")
-        raise ValueError
+        raise ValueError(f"h.passModel failed with status "
+                         f"{h.getModelStatus()}")
 
     # HiGHS' run returns a status indicating its success
     run_status: highspy._core.HighsStatus = h.run()
@@ -583,11 +598,10 @@ def highs_standard_genetics(
     mod_status: highspy._core.HighsModelStatus = h.getModelStatus()
     # HiGHS will try to continue if it gets an error, so stop it
     if run_status == highspy.HighsStatus.kError:
-        print(f"h.run failed with status {mod_status}")
-        raise ValueError
+        raise ValueError(f"h.run failed with status {mod_status}")
     elif mod_status != highspy.HighsModelStatus.kOptimal:
-        print(f"h.run did not achieve optimality, status {mod_status}")
-        raise RuntimeError
+        raise RuntimeError(f"h.run did not achieve optimality, status "
+                           f"{mod_status}")
 
     # by default, col_value is a stock-Python list
     solution: npt.NDArray[np.floating] = np.array(h.getSolution().col_value)
@@ -663,6 +677,10 @@ def highs_robust_genetics_sqp(
         Lower bound on how much each candidate can contribute. Can be an array
         of differing bounds for each candidate, or a float which applies to all
         candidates. Default value is `0.0`.
+    time_limit : float or None, optional
+        Maximum amount of time in seconds to give HiGHS to solve the problem.
+        May over run by one iteration: see issue #16. Default value is `None`,
+        i.e. no time limit.
     max_iterations : int, optional
         Maximum number of iterations that can be taken in solving the problem,
         i.e. the maximum number of constraints to use to approximate the conic
@@ -729,8 +747,8 @@ def highs_robust_genetics_sqp(
         h.writeModel(f"{model_output}.mps")
     # HiGHS will try to continue if it gets an error, so stop it
     if pass_status == highspy.HighsStatus.kError:
-        print(f"h.passModel failed with status {h.getModelStatus()}")
-        raise ValueError
+        raise ValueError(f"h.passModel failed with status "
+                         f"{h.getModelStatus()}")
 
     # add z variable with bound 0 < z < inf and cost kappa
     h.addVar(0, highspy.kHighsInf)
@@ -744,10 +762,27 @@ def highs_robust_genetics_sqp(
 
     # optional controls to stop HiGHS taking too long
     if time_limit:
-        h.setOptionValue('time_limit', time_limit)
+        time_remaining: float = time_limit
 
     for i in range(max_iterations):
-        run_status: highspy._core.HighsStatus = h.run()
+        # use at most the remaining unused time
+        if time_limit:
+            # NOTE for SQP it is not possible to restrict HiGHS to use
+            # at most the remaining unused time. See issue #16.
+            # h.setOptionValue('time_limit', time_remaining)
+            start_time: float = time()
+
+        try:
+            run_status: highspy._core.HighsStatus = h.run()
+        except RuntimeError as e:
+            raise RuntimeError(f"HiGHS failed with error:\n{e}")
+
+        # subtract time taken from time remaining
+        if time_limit:
+            time_remaining -= time() - start_time
+            if time_remaining < 0:
+                raise RuntimeError(f"HiGHS hit time limit of {time_limit} "
+                                   f"seconds without reaching optimality")
 
         # return model and solution at every approximation to help debug
         if model_output:
@@ -759,13 +794,11 @@ def highs_robust_genetics_sqp(
         model_status: highspy._core.HighsModelStatus = h.getModelStatus()
         # HiGHS will try to continue if it gets an error, so stop it
         if run_status == highspy.HighsStatus.kError:
-            print(f"h.run at approximation #{i} failed with status "
-                  f"{model_status}")
-            raise ValueError
+            raise RuntimeError(f"HiGHS at approximation #{i} failed with "
+                               f"status {model_status}")
         elif model_status != highspy.HighsModelStatus.kOptimal:
-            print(f"h.run did not achieve optimality at approximation "
-                  f"#{i}, status {model_status}")
-            raise RuntimeError
+            raise RuntimeError(f"HiGHS did not achieve optimality at "
+                               f"approximation #{i}, status {model_status}")
 
         # by default, col_value is a stock-Python list
         solution: list[float] = h.getSolution().col_value
