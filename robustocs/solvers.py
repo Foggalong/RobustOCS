@@ -521,8 +521,7 @@ def highs_standard_genetics(
         candidates. Default value is `0.0`.
     time_limit : float or None, optional
         Maximum amount of time in seconds to give HiGHS to solve the problem.
-        May over run by one iteration: see issue #16. Default value is `None`,
-        i.e. no time limit.
+        Default value is `None`, i.e. no time limit.
     model_output : str, optional
         Flag which controls whether Gurobi saves the model file to the working
         directory. If given, the string is used as the file name, 'str.mps',
@@ -576,10 +575,6 @@ def highs_standard_genetics(
         h.setOptionValue('output_flag', False)
         h.setOptionValue('log_to_console', False)
 
-    # optional controls to stop HiGHS taking too long
-    if time_limit:
-        h.setOptionValue('time_limit', time_limit)
-
     # HiGHS' passModel returns a status indicating its success
     pass_status: highspy._core.HighsStatus = h.passModel(model)
     # model file must be saved between passModel and any error
@@ -589,6 +584,10 @@ def highs_standard_genetics(
     if pass_status == highspy.HighsStatus.kError:
         raise ValueError(f"h.passModel failed with status "
                          f"{h.getModelStatus()}")
+
+    # optional controls to stop HiGHS taking too long (see issue #16)
+    if time_limit:
+        h.setOptionValue('time_limit', h.getRunTime() + time_limit)
 
     # HiGHS' run returns a status indicating its success
     run_status: highspy._core.HighsStatus = h.run()
@@ -679,8 +678,7 @@ def highs_robust_genetics_sqp(
         candidates. Default value is `0.0`.
     time_limit : float or None, optional
         Maximum amount of time in seconds to give HiGHS to solve the problem.
-        May over run by one iteration: see issue #16. Default value is `None`,
-        i.e. no time limit.
+        Default value is `None`, i.e. no time limit.
     max_iterations : int, optional
         Maximum number of iterations that can be taken in solving the problem,
         i.e. the maximum number of constraints to use to approximate the conic
@@ -765,11 +763,9 @@ def highs_robust_genetics_sqp(
         time_remaining: float = time_limit
 
     for i in range(max_iterations):
-        # use at most the remaining unused time
+        # use at most the remaining unused time (see issue #16)
         if time_limit:
-            # NOTE for SQP it is not possible to restrict HiGHS to use
-            # at most the remaining unused time. See issue #16.
-            # h.setOptionValue('time_limit', time_remaining)
+            h.setOptionValue('time_limit', h.getRunTime() + time_remaining)
             start_time: float = time()
 
         try:
