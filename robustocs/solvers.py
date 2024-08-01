@@ -340,9 +340,8 @@ def gurobi_robust_genetics_sqp(
         of differing bounds for each candidate, or a float which applies to all
         candidates. Default value is `0.0`.
     time_limit : float or None, optional
-        Maximum amount of time in seconds to give Gurobi to solve sub-problem.
-        Note it does *not* constrain how much time is taken overall. Default
-        value is `None`, i.e. no time limit.
+        Maximum amount of time in seconds to give Gurobi to solve the problem.
+        Default value is `None`, i.e. no time limit.
     max_iterations : int, optional
         Maximum number of iterations that can be taken in solving the problem,
         i.e. the maximum number of constraints to use to approximate the conic
@@ -522,7 +521,8 @@ def highs_standard_genetics(
         candidates. Default value is `0.0`.
     time_limit : float or None, optional
         Maximum amount of time in seconds to give HiGHS to solve the problem.
-        Default value is `None`, i.e. no time limit.
+        May over run by one iteration: see issue #16. Default value is `None`,
+        i.e. no time limit.
     model_output : str, optional
         Flag which controls whether Gurobi saves the model file to the working
         directory. If given, the string is used as the file name, 'str.mps',
@@ -677,6 +677,10 @@ def highs_robust_genetics_sqp(
         Lower bound on how much each candidate can contribute. Can be an array
         of differing bounds for each candidate, or a float which applies to all
         candidates. Default value is `0.0`.
+    time_limit : float or None, optional
+        Maximum amount of time in seconds to give HiGHS to solve the problem.
+        May over run by one iteration: see issue #16. Default value is `None`,
+        i.e. no time limit.
     max_iterations : int, optional
         Maximum number of iterations that can be taken in solving the problem,
         i.e. the maximum number of constraints to use to approximate the conic
