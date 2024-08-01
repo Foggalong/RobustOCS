@@ -10,7 +10,7 @@ from .solvers import *
 from .utils import *
 
 __author__ = "Josh Fogg"
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 
 # controls what's imported on `from robustocs import *`
 __all__ = [
