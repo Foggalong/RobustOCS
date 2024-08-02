@@ -8,6 +8,7 @@ Relationship Matrix for that pedigree structure.
 
 import numpy as np          # defines matrix structures
 import numpy.typing as npt  # variable typing definitions for NumPy
+from math import sqrt
 
 __all__ = ["makeA", "make_invA"]
 
@@ -90,14 +91,11 @@ def makeL(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
             # and L[i,j] = 0 for j = (q+1):i
 
             # compute the diagonal
-            s: float = 1
-            for j in range(0, p+1):
-                s -= L[i, j]**2
-            L[i, i] = s**0.5
+            L[i, i] = sqrt(1 - sum(L[i, j]**2 for j in range(p+1)))
 
+        # case where neither parents known; p = q = 0)
         else:
-            for j in range(0, i):
-                L[i, j] = 0
+            # L[i, j] = 0 for j in range(0, i)
             L[i, i] = 1
 
     return L
@@ -113,14 +111,9 @@ def make_invD2(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
 
     m: int = len(pedigree)
     L: npt.NDArray[np.floating] = makeL(pedigree)
-    # TODO find a better way to work with diagonal matrices
-    invD2: npt.NDArray[np.floating] = np.zeros((m, m), dtype=np.floating)
 
-    # iterate over rows
-    for i in range(0, m):
-        invD2[i, i] = 1/(L[i, i]**2)
-
-    return invD2
+    # don't store the full matrix, only the diagonal
+    return np.array([1/L[i, i]**2 for i in range(m)], dtype=np.floating)
 
 
 def make_invT(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
@@ -159,8 +152,10 @@ def make_invA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
     """
 
     m: int = len(pedigree)
-    B: npt.NDArray[np.floating] = make_invD2(pedigree)
-    invA = B
+    invD2: npt.NDArray[np.floating] = make_invD2(pedigree)
+
+    # convert invD2 into a dense matrix as the basis for invA
+    invA = np.diag(invD2)
 
     for i in range(0, m):
         # label parents p & q
@@ -169,8 +164,8 @@ def make_invA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
 
         # case where both both parents are known
         if p >= 0 and q >= 0:
-            x: float = -0.5*B[i, i]
-            y: float = 0.25*B[i, i]
+            x: float = -0.5*invD2[i]
+            y: float = 0.25*invD2[i]
             invA[p, i] += x
             invA[i, p] += x
             invA[q, i] += x
@@ -182,10 +177,12 @@ def make_invA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
 
         # case where one parent is known; p by *.ped convention
         elif p >= 0:
-            x: float = -0.5*B[i, i]
+            x: float = -0.5*invD2[i]
             invA[p, i] += x
             invA[i, p] += x
-            invA[p, p] += 0.25*B[i, i]
+            invA[p, p] += 0.25*invD2[i]
+
+        # nothing to do in case where neither parent is known
 
     return invA
 
@@ -199,8 +196,14 @@ def make_invA_decomposition(
     dictionary input and returns the inverse as matrix output.
     # TODO update the docstring to the new standard
     """
+
     invD2: npt.NDArray[np.floating] = make_invD2(pedigree)
     invT: npt.NDArray[np.floating] = make_invT(pedigree)
 
     # computing A^-1 = (T^-1)' * (D^2)^-1 * T^-1 in full
-    return np.matmul(invT.transpose(), np.matmul(invD2, invT))
+    # 1. invD2.reshape(-1,1) converts invD2 into a 1D column array
+    # 2. np.multiply computes the Hamard product between that 1D array
+    #    and invT, which is equivalent to diag(invD2)*invT but without
+    #    forming a full matrix unnecessarily.
+    # 3. finally compute the final matrix-matrix product
+    return invT.transpose() @ np.multiply(invD2.reshape(-1, 1), invT)
