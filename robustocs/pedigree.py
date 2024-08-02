@@ -6,8 +6,8 @@ Script which reads in a pedigree datafile and returns Wright's Numerator
 Relationship Matrix for that pedigree structure.
 """
 
-import numpy as np                  # standard NLA package
-from numpy import linalg as nla     # all eigenvalues
+import numpy as np          # defines matrix structures
+import numpy.typing as npt  # variable typing definitions for NumPy
 
 
 def maxEig(matrix, max_iterations, tolerance):
@@ -33,30 +33,26 @@ def maxEig(matrix, max_iterations, tolerance):
     # reached iteration limit, return whatever lambda we have
     return lam
 
+def makeA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
+    """
+    Constructs Wright's Numerator Relationship Matrix (WNRM) from a given
+    pedigree structure.
 
-def readPed(filename):
-    """
-    Function for reading *.ped files to a dictionary. Takes the file name
-    as a string input and returns the pedigree structure as a dictionary.
-    """
-    with open(filename, "r") as file:
-        # first line of *.ped lists the headers; skip
-        file.readline()
-        # create a list of int lists from each line (dropping optional labels)
-        data = [[int(x) for x in line.split(",")[0:3]] for line in file]
-    # convert this list of lists into a dictionary
-    ped = {entry[0]: entry[1:3] for entry in data}
-    return(ped)
+    Parameters
+    ----------
+    pedigree : dict
+        Pedigree structure in `{int: [int, int]}` dictionary format, such
+        as that returned from `load_ped`.
 
+    Returns
+    -------
+    ndarray
+        Wright's Numerator Relationship Matrix.
+    """
 
-def makeA(pedigree):
-    """
-    Construct Wright's Numerator Relationship Matrix from a given pedigree
-    structure. Takes the pedigree as a dictionary input and returns the
-    matrix as output.
-    """
     m = len(pedigree)
-    A = np.zeros((m, m))
+    # preallocate memory for A
+    A = np.zeros((m, m), dtype=np.floating)
 
     # iterate over rows
     for i in range(0, m):
@@ -72,7 +68,7 @@ def makeA(pedigree):
         # calculate diagonal entries
         A[i, i] = 1 + 0.5*A[p, q]
 
-    return(A)
+    return A
 
 
 def makeL(pedigree):
