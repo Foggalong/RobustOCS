@@ -10,29 +10,6 @@ import numpy as np          # defines matrix structures
 import numpy.typing as npt  # variable typing definitions for NumPy
 
 
-def maxEig(matrix, max_iterations, tolerance):
-    """
-    Takes a matrix (A), a maximum number of iterations (max_it), and
-    a tolerance (tol) and does at most that number of iterations of
-    the power method to find the largest eigenvalue of the matrix
-    within that tolerance.
-    """
-
-    x = np.transpose(np.sum(matrix, axis=1))
-    x = x/np.nla.norm(x)
-    lam = 0
-    # perform power method for set number of iterations
-    for i in range(1, max_iterations):
-        Ax = np.matmul(A, x)
-        lambda_new = np.matmul(np.transpose(x), np.matmul(A, x))/np.dot(x, x)
-        # finding largest so lambda^(i) > lambda^(i-1)
-        if (lambda_new-lam) < tolerance:
-            return lam
-        lam = lambda_new
-        x = Ax/nla.norm(x)
-    # reached iteration limit, return whatever lambda we have
-    return lam
-
 def makeA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
     """
     Constructs Wright's Numerator Relationship Matrix (WNRM) from a given

@@ -242,7 +242,8 @@ def solveROCS(
 
 
 # ANALYSIS UTILITIES
-# These functions are useful for analysing particular solutions
+# These functions are useful for analysing particular solutions or problem
+# variables.
 
 
 def sparsity(matrix: npt.ArrayLike, explicit_as_nz: bool = True) -> float:
@@ -273,6 +274,57 @@ def sparsity(matrix: npt.ArrayLike, explicit_as_nz: bool = True) -> float:
         nnz: int = np.count_nonzero(matrix)
 
     return nnz / np.prod(matrix.shape)
+
+
+def eigmax(
+    matrix: npt.ArrayLike,
+    max_iterations: int = 1000,
+    tolerance: float = 1e-7
+) -> float:
+    """
+    Compute the largest eigenvalue of a matrix using the power method.
+
+    Parameters
+    ----------
+    matrix : ArrayLike
+        Any matrix or matrix-like object.
+    max_iterations : int, optional
+        Maximum number of iterations to spend improving approximation of the
+        largest eigenvalue. If reached, whatever was the best approximation
+        at that iteration will be returned. Default is 1000 iterations.
+    tol: float, optional
+        Tolerance with which to check convergence. Default is 10^-7.
+
+    Returns
+    -------
+    float
+        The largest eigenvalue of the of the matrix, or the closest
+        approximation if the maximum iteration count was reached.
+    """
+
+    # start with initial guess of zero and its associated eigenvector
+    eigen_val: float = 0
+    eigen_vec: npt.NDArray[np.floating] = np.transpose(np.sum(matrix, axis=1))
+    eigen_vec: npt.NDArray[np.floating] = eigen_vec/np.nla.norm(eigen_vec)
+
+    # perform power method for set number of iterations
+    for _ in range(max_iterations):
+        # will use matrix @ eigen_vec twice so store to avoid duplication
+        Ax: npt.NDArray[np.floating] = matrix @ eigen_vec
+
+        # compute the next guess for an eigenvalue
+        eigen_new = (eigen_vec @ Ax)/np.dot(eigen_vec, eigen_vec)
+
+        # finding largest so lambda^(i) > lambda^(i-1) is guaranteed
+        if (eigen_new - eigen_val) < tolerance:
+            return eigen_val
+
+        # if not converged, update associated eigenvector and loop
+        eigen_val = eigen_new
+        eigen_vec = Ax/np.nla.norm(eigen_vec)
+
+    # reached iteration limit, return whatever lambda we have
+    return eigen_new
 
 
 def expected_genetic_merit(w: npt.ArrayLike, mu: npt.ArrayLike) -> np.floating:
