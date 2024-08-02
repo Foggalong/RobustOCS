@@ -10,11 +10,6 @@ import numpy as np                  # standard NLA package
 from numpy import linalg as nla     # all eigenvalues
 
 
-def sparsity(matrix):
-    """Quick function which returns the sparsity of a matrix"""
-    return np.count_nonzero(matrix)/np.product(matrix.shape)
-
-
 def maxEig(matrix, max_iterations, tolerance):
     """
     Takes a matrix (A), a maximum number of iterations (max_it), and

@@ -244,6 +244,37 @@ def solveROCS(
 # ANALYSIS UTILITIES
 # These functions are useful for analysing particular solutions
 
+
+def sparsity(matrix: npt.ArrayLike, explicit_as_nz: bool = True) -> float:
+    """
+    Shortcut function which computes the sparsity of a matrix.
+
+    Parameters
+    ----------
+    matrix : ArrayLike
+        Any matrix or matrix-like object. Does not have to be square.
+    explicit_as_nz : bool, optional
+        If the matrix is not an `spmatrix` object, this will be ignored. If
+        it is and this parameter is True sparsity will be computed treating
+        explicit zeros as non-zeros, and of False treating them as zeros.
+        Default value is `True`.
+
+    Returns
+    -------
+    float
+        The sparsity of the matrix, i.e. the number of non-zero entries
+        divided by the number of entries total.
+    """
+
+    # spmatrix objects have attributes and methods for number of non-zeros
+    if isinstance(matrix, sparse.spmatrix):
+        nnz: int = matrix.nnz if explicit_as_nz else matrix.count_nonzero()
+    else:
+        nnz: int = np.count_nonzero(matrix)
+
+    return nnz / np.prod(matrix.shape)
+
+
 def expected_genetic_merit(w: npt.ArrayLike, mu: npt.ArrayLike) -> np.floating:
     """
     Shortcut function for computing the expected genetic merit (w'μ) of a
