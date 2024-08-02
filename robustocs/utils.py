@@ -104,8 +104,7 @@ def solveROCS(
         matrix or a sparse one. Default value is `False` (i.e. as dense).
     time_limit : float, optional
         Maximum amount of time in seconds to give the underlying solver to find
-        a solution. If using HiGHS this may overrun: see issue #16. Default
-        value is `None`, i.e. no time limit.
+        a solution. Default value is `None`, i.e. no time limit.
     max_iterations : int, optional
         Maximum number of iterations that can be taken in solving the robust
         problem using SQP. This is specific to robust optimization and will be
