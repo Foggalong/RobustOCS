@@ -9,6 +9,8 @@ Relationship Matrix for that pedigree structure.
 import numpy as np          # defines matrix structures
 import numpy.typing as npt  # variable typing definitions for NumPy
 
+__all__ = ["makeA", "make_invA"]
+
 
 def makeA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
     """
@@ -27,15 +29,15 @@ def makeA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
         Wright's Numerator Relationship Matrix.
     """
 
-    m = len(pedigree)
+    m: int = len(pedigree)
     # preallocate memory for A
-    A = np.zeros((m, m), dtype=np.floating)
+    A: npt.NDArray[np.floating] = np.zeros((m, m), dtype=np.floating)
 
     # iterate over rows
     for i in range(0, m):
         # save parent indexes: pedigrees indexed from 1, Python from 0
-        p = pedigree[i+1][0]-1
-        q = pedigree[i+1][1]-1
+        p: int = pedigree[i+1][0]-1
+        q: int = pedigree[i+1][1]-1
         # iterate over columns sub-diagonal
         for j in range(0, i):
             # calculate sub-diagonal entries
@@ -48,20 +50,22 @@ def makeA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
     return A
 
 
-def makeL(pedigree):
+def makeL(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
     """
     Construct the Cholesky factor L of Wright's Numerator Relationship Matrix
     from a given pedigree structure. Takes the pedigree as a dictionary input
     and returns the matrix L (in A = L'L) as output.
+    # TODO update the docstring to the new standard
     """
-    m = len(pedigree)
-    L = np.zeros((m, m))
+
+    m: int = len(pedigree)
+    L: npt.NDArray[np.floating] = np.zeros((m, m), dtype=np.floating)
 
     # iterate over rows
     for i in range(0, m):
         # save parent indexes: pedigrees indexed from 1, Python from 0
-        p = pedigree[i+1][0]-1
-        q = pedigree[i+1][1]-1
+        p: int = pedigree[i+1][0]-1
+        q: int = pedigree[i+1][1]-1
 
         # case where both parents are known; p < q bny *.ped convention
         if p >= 0 and q >= 0:
@@ -72,7 +76,7 @@ def makeL(pedigree):
             # and L[i,j] = 0 for j = (q+1):i
 
             # compute the diagonal
-            s = 1
+            s: float = 1
             for j in range(0, p+1):
                 s += 0.5*L[p, j]*L[q, j]
             for j in range(0, q+1):
@@ -86,7 +90,7 @@ def makeL(pedigree):
             # and L[i,j] = 0 for j = (q+1):i
 
             # compute the diagonal
-            s = 1
+            s: float = 1
             for j in range(0, p+1):
                 s -= L[i, j]**2
             L[i, i] = s**0.5
@@ -96,39 +100,44 @@ def makeL(pedigree):
                 L[i, j] = 0
             L[i, i] = 1
 
-    return(L)
+    return L
 
 
-def make_invD2(pedigree):
+def make_invD2(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
     """
     Construct the inverse of the D^2 factor from the Henderson (1976)
     decomposition of a WNRM. Takes the pedigree as a dictionary input
     and returns the inverse of matrix D^2 (in A = L'L = T'DDT) as output.
+    # TODO update the docstring to the new standard
     """
-    m = len(pedigree)
-    L = makeL(pedigree)
-    invD2 = np.zeros((m, m))  # TODO find a way to store diagonal matrices
+
+    m: int = len(pedigree)
+    L: npt.NDArray[np.floating] = makeL(pedigree)
+    # TODO find a better way to work with diagonal matrices
+    invD2: npt.NDArray[np.floating] = np.zeros((m, m), dtype=np.floating)
 
     # iterate over rows
     for i in range(0, m):
         invD2[i, i] = 1/(L[i, i]**2)
 
-    return(invD2)
+    return invD2
 
 
-def make_invT(pedigree):
+def make_invT(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
     """
     Construct the inverse of the D factor from the Henderson (1976)
     decomposition of a WNRM. Takes the pedigree as a dictionary input
     and returns the inverse of matrix D (in A = L'L = T'DDT) as output.
+    # TODO update the docstring to the new standard
     """
-    m = len(pedigree)
-    invT = np.zeros((m, m))
+
+    m: int = len(pedigree)
+    invT: npt.NDArray[np.floating] = np.zeros((m, m), dtype=np.floating)
 
     for i in range(0, m):
         # label parents p & q
-        p = pedigree[i+1][0]-1
-        q = pedigree[i+1][1]-1
+        p: int = pedigree[i+1][0]-1
+        q: int = pedigree[i+1][1]-1
         # set columns corresponding to known parents to -0.5
         if p >= 0:
             invT[i, p] = -0.5
@@ -137,29 +146,31 @@ def make_invT(pedigree):
         # T^-1 has 1s on the diagonal
         invT[i, i] = 1
 
-    return(invT)
+    return invT
 
 
-def make_invA(pedigree):
+def make_invA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
     """
     Compute the inverse of A using a shortcut which exploits
     of its T and D decomposition, detailed in Henderson (1976).
     Takes the pedigree as a dictionary input and returns the
     inverse as matrix output.
+    # TODO update the docstring to the new standard
     """
-    m = len(pedigree)
-    B = make_invD2(ped)
+
+    m: int = len(pedigree)
+    B: npt.NDArray[np.floating] = make_invD2(pedigree)
     invA = B
 
     for i in range(0, m):
         # label parents p & q
-        p = pedigree[i+1][0]-1
-        q = pedigree[i+1][1]-1
+        p: int = pedigree[i+1][0]-1
+        q: int = pedigree[i+1][1]-1
 
         # case where both both parents are known
         if p >= 0 and q >= 0:
-            x = -0.5*B[i, i]
-            y = 0.25*B[i, i]
+            x: float = -0.5*B[i, i]
+            y: float = 0.25*B[i, i]
             invA[p, i] += x
             invA[i, p] += x
             invA[q, i] += x
@@ -171,23 +182,25 @@ def make_invA(pedigree):
 
         # case where one parent is known; p by *.ped convention
         elif p >= 0:
-            x = -0.5*B[i, i]
+            x: float = -0.5*B[i, i]
             invA[p, i] += x
             invA[i, p] += x
             invA[p, p] += 0.25*B[i, i]
 
-    return(invA)
+    return invA
 
 
-def make_invA_decomposition(pedigree):
+def make_invA_decomposition(
+    pedigree: dict[int, list[int]]
+) -> npt.NDArray[np.floating]:
     """
     Calculate the inverse of A using its T and D decomposition
     factors from Henderson (1976). Takes the pedigree as a
     dictionary input and returns the inverse as matrix output.
+    # TODO update the docstring to the new standard
     """
-    invD2 = make_invD2(ped)
-    invT = make_invT(ped)
+    invD2: npt.NDArray[np.floating] = make_invD2(pedigree)
+    invT: npt.NDArray[np.floating] = make_invT(pedigree)
 
     # computing A^-1 = (T^-1)' * (D^2)^-1 * T^-1 in full
-    invA = np.matmul(invT.transpose(), np.matmul(invD2, invT))
-    return(invA)
+    return np.matmul(invT.transpose(), np.matmul(invD2, invT))
