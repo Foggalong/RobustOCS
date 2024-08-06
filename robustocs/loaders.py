@@ -8,7 +8,9 @@ functions define the appropriate methods for loading those in correctly.
 import numpy as np          # defines matrix structures
 import numpy.typing as npt  # variable typing definitions for NumPy
 from scipy import sparse    # used for sparse matrix format
-from pedigree import makeA  # local import for processing pedigree data
+
+# local imports for processing pedigree data
+from .pedigree import makeA
 
 # controls what's imported on `from robustocs.loaders import *`
 __all__ = ["load_ped", "load_problem"]
