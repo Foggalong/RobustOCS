@@ -1,16 +1,23 @@
 # -*- coding: utf-8 -*-
-"""Loading in Genetics Data
+"""Loading in OCS Problem Data
 
-Genetics data could be presented to our solvers in multiple formats, these
-functions define the appropriate methods for loading those in correctly.
+Genetics data could be presented to our solvers in multiple formats, so the
+functions in `loaders` define the appropriate methods for loading those into
+Python correctly.
+
+Documentation is available in the docstrings and online at
+https://github.com/Foggalong/RobustOCS/wiki
 """
 
 import numpy as np          # defines matrix structures
 import numpy.typing as npt  # variable typing definitions for NumPy
 from scipy import sparse    # used for sparse matrix format
 
+# local imports for processing pedigree data
+from .pedigree import makeA
+
 # controls what's imported on `from robustocs.loaders import *`
-__all__ = ["load_ped", "makeA", "load_problem"]
+__all__ = ["load_ped", "load_problem"]
 
 
 # DATA LOADERS
@@ -223,51 +230,9 @@ def load_ped(filename: str) -> dict[int, list[int]]:
         file.readline()
         # create a list of int lists from each line (dropping optional labels)
         data = [[int(x) for x in line.split(",")[0:3]] for line in file]
-    # convert this list of lists into a dictionary
-    ped = {entry[0]: entry[1:3] for entry in data}
 
-    return ped
-
-
-# MATRIX GENERATORS
-# Utility functions for generating matrices from pedigree data.
-
-def makeA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
-    """
-    Constructs Wright's Numerator Relationship Matrix (WNRM) from a given
-    pedigree structure.
-
-    Parameters
-    ----------
-    pedigree : dict
-        Pedigree structure in `{int: [int, int]}` dictionary format, such
-        as that returned from `load_ped`.
-
-    Returns
-    -------
-    ndarray
-        Wright's Numerator Relationship Matrix.
-    """
-
-    m = len(pedigree)
-    # preallocate memory for A
-    A = np.zeros((m, m), dtype=np.floating)
-
-    # iterate over rows
-    for i in range(0, m):
-        # save parent indexes: pedigrees indexed from 1, Python from 0
-        p = pedigree[i+1][0]-1
-        q = pedigree[i+1][1]-1
-        # iterate over columns sub-diagonal
-        for j in range(0, i):
-            # calculate sub-diagonal entries
-            A[i, j] = 0.5*(A[j, p] + A[j, q])
-            # populate sup-diagonal (symmetric)
-            A[j, i] = A[i, j]
-        # calculate diagonal entries
-        A[i, i] = 1 + 0.5*A[p, q]
-
-    return A
+    # convert the list of lists into a dictionary on return
+    return {entry[0]: entry[1:3] for entry in data}
 
 
 # PROBLEM LOADERS

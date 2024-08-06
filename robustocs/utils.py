@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 """Utilities
 
-This file contains additional utilities, such as for printing and comparing
-portfolios produced by the solvers.
+In `utils` we define additional utilities to make working with RobustOCS
+easier, such as for printing and comparing different solutions.
+
+Documentation is available in the docstrings and online at
+https://github.com/Foggalong/RobustOCS/wiki
 """
 
 import math                 # used for math.sqrt
@@ -104,8 +107,7 @@ def solveROCS(
         matrix or a sparse one. Default value is `False` (i.e. as dense).
     time_limit : float, optional
         Maximum amount of time in seconds to give the underlying solver to find
-        a solution. If using HiGHS this may overrun: see issue #16. Default
-        value is `None`, i.e. no time limit.
+        a solution. Default value is `None`, i.e. no time limit.
     max_iterations : int, optional
         Maximum number of iterations that can be taken in solving the robust
         problem using SQP. This is specific to robust optimization and will be
@@ -243,7 +245,90 @@ def solveROCS(
 
 
 # ANALYSIS UTILITIES
-# These functions are useful for analysing particular solutions
+# These functions are useful for analysing particular solutions or problem
+# variables.
+
+
+def sparsity(matrix: npt.ArrayLike, explicit_as_nz: bool = True) -> float:
+    """
+    Shortcut function which computes the sparsity of a matrix.
+
+    Parameters
+    ----------
+    matrix : ArrayLike
+        Any matrix or matrix-like object. Does not have to be square.
+    explicit_as_nz : bool, optional
+        If the matrix is not an `spmatrix` object, this will be ignored. If
+        it is and this parameter is True sparsity will be computed treating
+        explicit zeros as non-zeros, and of False treating them as zeros.
+        Default value is `True`.
+
+    Returns
+    -------
+    float
+        The sparsity of the matrix, i.e. the number of non-zero entries
+        divided by the number of entries total.
+    """
+
+    # spmatrix objects have attributes and methods for number of non-zeros
+    if isinstance(matrix, sparse.spmatrix):
+        nnz: int = matrix.nnz if explicit_as_nz else matrix.count_nonzero()
+    else:
+        nnz: int = np.count_nonzero(matrix)
+
+    return nnz / np.prod(matrix.shape)
+
+
+def eigmax(
+    matrix: npt.ArrayLike,
+    max_iterations: int = 1000,
+    tolerance: float = 1e-7
+) -> float:
+    """
+    Compute the largest eigenvalue of a matrix using the power method.
+
+    Parameters
+    ----------
+    matrix : ArrayLike
+        Any matrix or matrix-like object.
+    max_iterations : int, optional
+        Maximum number of iterations to spend improving approximation of the
+        largest eigenvalue. If reached, whatever was the best approximation
+        at that iteration will be returned. Default is 1000 iterations.
+    tol: float, optional
+        Tolerance with which to check convergence. Default is 10^-7.
+
+    Returns
+    -------
+    float
+        The largest eigenvalue of the of the matrix, or the closest
+        approximation if the maximum iteration count was reached.
+    """
+
+    # start with initial guess of zero and its associated eigenvector
+    eigen_val: float = 0
+    eigen_vec: npt.NDArray[np.floating] = np.transpose(np.sum(matrix, axis=1))
+    eigen_vec: npt.NDArray[np.floating] = eigen_vec/np.nla.norm(eigen_vec)
+
+    # perform power method for set number of iterations
+    for _ in range(max_iterations):
+        # will use matrix @ eigen_vec twice so store to avoid duplication
+        Ax: npt.NDArray[np.floating] = matrix @ eigen_vec
+
+        # compute the next guess for an eigenvalue
+        eigen_new = (eigen_vec @ Ax)/np.dot(eigen_vec, eigen_vec)
+
+        # finding largest so lambda^(i) > lambda^(i-1) is guaranteed
+        if (eigen_new - eigen_val) < tolerance:
+            return eigen_val
+
+        # if not converged, update associated eigenvector and loop
+        eigen_val = eigen_new
+        eigen_vec = Ax/np.nla.norm(eigen_vec)
+
+    # reached iteration limit, return whatever lambda we have
+    return eigen_new
+
 
 def expected_genetic_merit(w: npt.ArrayLike, mu: npt.ArrayLike) -> np.floating:
     """
