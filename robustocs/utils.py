@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 """Utilities
 
-This file contains additional utilities, such as for printing and comparing
-portfolios produced by the solvers.
+In `utils` we define additional utilities to make working with RobustOCS
+easier, such as for printing and comparing different solutions.
+
+Documentation is available in the docstrings and online at
+https://github.com/Foggalong/RobustOCS/wiki
 """
 
 import math                 # used for math.sqrt

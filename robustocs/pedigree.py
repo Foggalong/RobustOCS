@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 """Working with Pedigree Data
 
-TODO update this docstring.
-Script which reads in a pedigree datafile and returns Wright's Numerator
-Relationship Matrix for that pedigree structure.
+With pedigree data we can use Wright's Numerator Relationship Matrix to
+obtain a relationship matrix and its inverse cheaply, the functions for
+which are included in `pedigree`.
+
+Documentation is available in the docstrings and online at
+https://github.com/Foggalong/RobustOCS/wiki
 """
 
 import numpy as np          # defines matrix structures
@@ -53,10 +56,20 @@ def makeA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
 
 def makeL(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
     """
-    Construct the Cholesky factor L of Wright's Numerator Relationship Matrix
-    from a given pedigree structure. Takes the pedigree as a dictionary input
-    and returns the matrix L (in A = L'L) as output.
-    # TODO update the docstring to the new standard
+    Constructs the Cholesky factor L of Wright's Numerator Relationship Matrix
+    (WNRM) from a given pedigree structure.
+
+    Parameters
+    ----------
+    pedigree : dict
+        Pedigree structure in `{int: [int, int]}` dictionary format, such
+        as that returned from `load_ped`.
+
+    Returns
+    -------
+    ndarray
+        The Cholesky factor L of Wright's Numerator Relationship Matrix A,
+        so that A = L'L.
     """
 
     m: int = len(pedigree)
@@ -103,10 +116,21 @@ def makeL(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
 
 def make_invD2(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
     """
-    Construct the inverse of the D^2 factor from the Henderson (1976)
-    decomposition of a WNRM. Takes the pedigree as a dictionary input
-    and returns the inverse of matrix D^2 (in A = L'L = T'DDT) as output.
-    # TODO update the docstring to the new standard
+    Constructs the inverse of the D² factor from Henderson's decomposition
+    (1976) of Wright's Numerator Relationship Matrix (WNRM) from a given
+    pedigree structure.
+
+    Parameters
+    ----------
+    pedigree : dict
+        Pedigree structure in `{int: [int, int]}` dictionary format, such
+        as that returned from `load_ped`.
+
+    Returns
+    -------
+    ndarray
+        The inverse of matrix D² in A = L'L = T'DDT, where A is Wright's
+        Numerator Relationship Matrix and L is its Cholesky factor.
     """
 
     m: int = len(pedigree)
@@ -118,10 +142,21 @@ def make_invD2(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
 
 def make_invT(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
     """
-    Construct the inverse of the D factor from the Henderson (1976)
-    decomposition of a WNRM. Takes the pedigree as a dictionary input
-    and returns the inverse of matrix D (in A = L'L = T'DDT) as output.
-    # TODO update the docstring to the new standard
+    Constructs the inverse of the T factor from Henderson's decomposition
+    (1976) of Wright's Numerator Relationship Matrix (WNRM) from a given
+    pedigree structure.
+
+    Parameters
+    ----------
+    pedigree : dict
+        Pedigree structure in `{int: [int, int]}` dictionary format, such
+        as that returned from `load_ped`.
+
+    Returns
+    -------
+    ndarray
+        The inverse of matrix T in A = L'L = T'DDT, where A is Wright's
+        Numerator Relationship Matrix and L is its Cholesky factor.
     """
 
     m: int = len(pedigree)
@@ -144,11 +179,20 @@ def make_invT(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
 
 def make_invA(pedigree: dict[int, list[int]]) -> npt.NDArray[np.floating]:
     """
-    Compute the inverse of A using a shortcut which exploits
-    of its T and D decomposition, detailed in Henderson (1976).
-    Takes the pedigree as a dictionary input and returns the
-    inverse as matrix output.
-    # TODO update the docstring to the new standard
+    Compute the inverse of Wright's Numerator Relationship Matrix (WNRM)
+    using a shortcut which exploits properties of the matrix's decomposition
+    as outlined by Henderson (1976).
+
+    Parameters
+    ----------
+    pedigree : dict
+        Pedigree structure in `{int: [int, int]}` dictionary format, such
+        as that returned from `load_ped`.
+
+    Returns
+    -------
+    ndarray
+        The inverse of the WNRM described by the pedigree structure.
     """
 
     m: int = len(pedigree)
@@ -191,19 +235,28 @@ def make_invA_decomposition(
     pedigree: dict[int, list[int]]
 ) -> npt.NDArray[np.floating]:
     """
-    Calculate the inverse of A using its T and D decomposition
-    factors from Henderson (1976). Takes the pedigree as a
-    dictionary input and returns the inverse as matrix output.
-    # TODO update the docstring to the new standard
+    Compute the inverse of Wright's Numerator Relationship Matrix (WNRM)
+    using its LDDL' decomposition. NOTE: this will be less efficient than
+    `make_invA`, which does this while also exploiting properties of that
+    decomposition to reduce the number of computations necessary.
+
+    Parameters
+    ----------
+    pedigree : dict
+        Pedigree structure in `{int: [int, int]}` dictionary format, such
+        as that returned from `load_ped`.
+
+    Returns
+    -------
+    ndarray
+        The inverse of the WNRM described by the pedigree structure.
     """
 
     invD2: npt.NDArray[np.floating] = make_invD2(pedigree)
     invT: npt.NDArray[np.floating] = make_invT(pedigree)
 
-    # computing A^-1 = (T^-1)' * (D^2)^-1 * T^-1 in full
-    # 1. invD2.reshape(-1,1) converts invD2 into a 1D column array
-    # 2. np.multiply computes the Hamard product between that 1D array
-    #    and invT, which is equivalent to diag(invD2)*invT but without
-    #    forming a full matrix unnecessarily.
-    # 3. finally compute the final matrix-matrix product
+    # Since invD2 is a 1D array with shape (n,) we know invD2.reshape(-1, 1)
+    # gives a column vector with shape (n,1). This means the np.multiply is
+    # a Hadamard product between that vector and invT, which is equivalent
+    # to diag(invD2)*invT but without forming a full matrix unnecessarily.
     return invT.transpose() @ np.multiply(invD2.reshape(-1, 1), invT)

@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Loading in Genetics Data
+"""Loading in OCS Problem Data
 
-Genetics data could be presented to our solvers in multiple formats, these
-functions define the appropriate methods for loading those in correctly.
+Genetics data could be presented to our solvers in multiple formats, so the
+functions in `loaders` define the appropriate methods for loading those into
+Python correctly.
+
+Documentation is available in the docstrings and online at
+https://github.com/Foggalong/RobustOCS/wiki
 """
 
 import numpy as np          # defines matrix structures
