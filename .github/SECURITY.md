@@ -6,8 +6,8 @@ At present only the most recent version of RobustOCS is considered supported and
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
-| < 0.1.x | :x:                |
+| 0.2.x   | :white_check_mark: |
+| < 0.2.x | :x:                |
 
 ## Reporting a Vulnerability
 
