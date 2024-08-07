@@ -50,6 +50,7 @@ def solveROCS(
     time_limit: float | None = None,
     max_iterations: int = 1000,
     robust_gap_tol: float = 1e-7,
+    solution_output: str = '',
     model_output: str = '',
     debug: bool = False
 ):
@@ -117,6 +118,10 @@ def solveROCS(
         and whether the SQP overall has converged. This is specific to robust
         optimization and will be ignored if doing standard optimization.
         Default value is 10^-7.
+    solution_output : str, optional
+        Flag which controls whether the solver saves the solution to a file in
+        the  working directory. If given, the string is used as the file name,
+        'str.csv', Default value is the empty string, i.e. it doesn't save.
     model_output : str, optional
         Flag which controls whether the solver saves the model file to the
         working directory. If given, the string is used as the file name,
@@ -135,6 +140,7 @@ def solveROCS(
         "sigma": sigma_filename,
         "mu": mu_filename,
         "sexes": sex_filename,
+        "solution output": solution_output,
         "model output": model_output
     }
 
@@ -204,7 +210,7 @@ def solveROCS(
     # -----------------
 
     # try to load the variables from file into NumPy
-    sigma, mu, omega, n, sires, dams, _ = loaders.load_problem(
+    sigma, mu, omega, n, sires, dams, names = loaders.load_problem(
         sigma_filename, mu_filename, omega_filename, sex_filename,
         issparse=True
     )
@@ -240,6 +246,18 @@ def solveROCS(
     # quicker to compute useful metrics rather than after the fact
     EGM = expected_genetic_merit(portfolio, mu)
     GCA = group_coancestry_fast(mu, lam, objective, portfolio)
+
+    # OUTPUT
+    # ------
+
+    # if requested, also portfolio vector to CSV file
+    if solution_output:
+        with open(f"{solution_output}.csv", 'a') as file:
+            # add the header
+            file.write("candidate,contribution\n")
+            # line for each candidate with its name and contribution
+            for i in range(n):
+                file.write(f"{names[i]},{portfolio[i]}\n")
 
     return portfolio, objective, EGM, GCA
 
