@@ -3,6 +3,7 @@ on:
   push:
     paths:
     - 'robustocs/pedigree.py'
+    - 'examples/ped/test.py'
   workflow_dispatch:
 
 jobs:
