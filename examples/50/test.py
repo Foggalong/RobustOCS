@@ -3,6 +3,12 @@
 import numpy as np
 import robustocs as rocs
 
+"""
+While this script may be used as an example of using RobustOCS, it's primarily
+intended for use as a test as part of the 'Check Build' GitHub action.
+https://github.com/Foggalong/RobustOCS/actions/workflows/check-build.yml
+"""
+
 # SETUP
 # -----
 

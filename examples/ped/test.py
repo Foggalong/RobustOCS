@@ -1,6 +1,14 @@
+#!/usr/bin/env python3
+
 import numpy as np
 import robustocs as rocs
 from time import time
+
+"""
+While this script may be used as an example of using RobustOCS, it's primarily
+intended for use as a test as part of the 'Test Pedigree' GitHub action.
+https://github.com/Foggalong/RobustOCS/actions/workflows/check-pedigree.yml
+"""
 
 
 ped = rocs.load_ped("example.ped")
