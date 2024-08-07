@@ -41,8 +41,9 @@ where `selection` will be an array of optimal selections, `objective` is a score
 
 ## Documentation
 
-The [GitHub wiki] includes documentation written by which explains the usage and parameters in more detail, alongside some worked examples using the more granular solver functions (the data for which is in [`examples/`](examples/)). This includes a realistic simulated example from [Gregor Gorjanc] and [Ivan Pocrnić].
+The [GitHub wiki] includes documentation which explains the usage and parameters in more detail, full rundowns of the key functions (including the quick-start's [`solveROCS`]), all alongside some worked examples using the more granular solver functions (the data for which is in [`examples/`](examples/)). This includes a realistic simulated example from [Gregor Gorjanc] and [Ivan Pocrnić].
 
+[`solveROCS`]: https://github.com/Foggalong/RobustOCS/wiki/solveROCS
 [GitHub wiki]: https://github.com/Foggalong/RobustOCS/wiki
 [Gregor Gorjanc]: https://www.ed.ac.uk/profile/gregor-gorjanc
 [Ivan Pocrnić]: https://www.ed.ac.uk/profile/ivan-pocrnic
