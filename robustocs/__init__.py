@@ -33,5 +33,7 @@ __all__ = [
     "highs_standard_genetics", "highs_robust_genetics",
     "highs_robust_genetics_sqp",
     # from utils.py
-    "print_compare_solutions", "check_uncertainty_constraint"
+    "solveROCS", "sparsity", "eigmax", "cond", "expected_genetic_merit",
+    "group_coancestry", "group_coancestry_fast", "print_compare_solutions",
+    "check_uncertainty_constraint"
 ]
