@@ -19,7 +19,7 @@ from .solvers import (
 from .utils import print_compare_solutions, check_uncertainty_constraint
 
 __author__ = "Josh Fogg"
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 # controls what's imported on `from robustocs import *`
 __all__ = [
