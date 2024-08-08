@@ -20,6 +20,9 @@ from . import loaders
 # controls what's imported on `from robustocs.utils import *`
 __all__ = [
     "solveROCS",
+    "sparsity",
+    "eigmax",
+    "cond",
     "expected_genetic_merit",
     "group_coancestry",
     "group_coancestry_fast",
@@ -346,6 +349,54 @@ def eigmax(
 
     # reached iteration limit, return whatever lambda we have
     return eigen_new
+
+
+def cond(
+    matrix: npt.NDArray,
+    matrix_inv: npt.NDArray | None = None,
+    max_iterations: int = 5,
+    tolerance: float = 1e-7
+) -> float:
+    """
+    Compute the condition number of a matrix for use in sensitivity analysis.
+
+    Parameters
+    ----------
+    matrix : ArrayLike
+        Any matrix or matrix-like object.
+    matrix_inv : ArrayLike, optional
+        Any matrix or matrix-like object which exactly is the inverse
+        of the `matrix` parameter. Optional, and if not provided (the default)
+        then acts as a wrapper to NumPy's linalg.cond function.
+    max_iterations : int, optional
+        Maximum number of power method iterations if using `matrix_inv`,
+        otherwise ignored. Default is 5 iterations.
+    tol: float, optional
+        Tolerance with which to check convergence if using `matrix_inv`,
+        otherwise ignored. Default is 10^-7.
+
+    Returns
+    -------
+    float
+        The condition number of the matrix, or the closest approximation
+        using power method if the maximum iteration count was reached.
+    """
+
+    # If we don't know the matrix's inverse it's best to just use NumPy
+    if matrix_inv is None:
+        return np.linalg.cond(matrix)
+
+    # When computing the condition number of a matrix it's ordinarily more
+    # efficient to compute its largest eigenvalue using power method and then
+    # its smallest eigenvalue using the inverse power method. When working
+    # with pedigree data however it's relatively cheap to get the inverse of
+    # the matrix so it can work out more efficient to compute the largest
+    # eigenvalues of the matrix and its inverse both using power method. This
+    # is usually possible within a relatively small number of iterations.
+    eigmax_preA = eigmax(matrix,     max_iterations, tolerance)
+    eigmax_invA = eigmax(matrix_inv, max_iterations, tolerance)
+
+    return eigmax_preA*eigmax_invA
 
 
 def expected_genetic_merit(w: npt.ArrayLike, mu: npt.ArrayLike) -> np.floating:
