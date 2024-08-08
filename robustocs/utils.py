@@ -287,8 +287,8 @@ def sparsity(matrix: npt.ArrayLike, explicit_as_nz: bool = True) -> float:
     Returns
     -------
     float
-        The sparsity of the matrix, i.e. the number of non-zero entries
-        divided by the number of entries total.
+        The sparsity of the matrix, i.e. the number of zero entries divided
+        by the number of entries total.
     """
 
     # spmatrix objects have attributes and methods for number of non-zeros
@@ -297,7 +297,7 @@ def sparsity(matrix: npt.ArrayLike, explicit_as_nz: bool = True) -> float:
     else:
         nnz: int = np.count_nonzero(matrix)
 
-    return nnz / np.prod(matrix.shape)
+    return 1 - (nnz / np.prod(matrix.shape))
 
 
 def eigmax(
