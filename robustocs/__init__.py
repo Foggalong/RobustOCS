@@ -16,7 +16,11 @@ from .solvers import (
     highs_standard_genetics, highs_robust_genetics,
     highs_robust_genetics_sqp
 )
-from .utils import print_compare_solutions, check_uncertainty_constraint
+from .utils import (
+    solveROCS, sparsity, eigmax, cond, expected_genetic_merit,
+    group_coancestry, group_coancestry_fast, print_compare_solutions,
+    check_uncertainty_constraint
+)
 
 __author__ = "Josh Fogg"
 __version__ = "0.2.1"
